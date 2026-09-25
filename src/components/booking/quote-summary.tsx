@@ -7,10 +7,13 @@ export function QuoteSummary({
   quote,
   loading,
   serviceName,
+  labels = {},
 }: {
   quote: QuoteResult | null;
   loading?: boolean;
   serviceName?: string;
+  /** Optional slug -> display name map (e.g. extras). */
+  labels?: Record<string, string>;
 }) {
   if (!quote) {
     return (
@@ -30,7 +33,7 @@ export function QuoteSummary({
         {visible.map((l, i) => (
           <li key={`${l.step}-${l.key}-${i}`} className="flex justify-between gap-3">
             <span className="text-muted-foreground">
-              {l.label}
+              {l.step === "EXTRA" ? (labels[l.key] ?? l.label) : l.label}
               {l.qty > 1 && l.step === "EXTRA" ? ` × ${l.qty}` : ""}
             </span>
             <span className={l.amountCents < 0 ? "text-emerald-700" : ""}>

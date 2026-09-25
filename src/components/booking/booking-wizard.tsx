@@ -685,6 +685,7 @@ export function BookingWizard({
           quote={quote?.quote ?? null}
           loading={quoteLoading}
           serviceName={stepIndex >= 1 ? service?.name : undefined}
+          labels={Object.fromEntries(extras.map((x) => [x.slug, x.name]))}
         />
         {region ? (
           <p className="mt-2 text-xs text-muted-foreground">
