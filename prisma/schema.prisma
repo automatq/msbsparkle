@@ -1375,3 +1375,15 @@ model CleanerApplication {
 
   @@index([regionId, status])
 }
+
+/// Out-of-area interest captured from the booking form.
+model ServiceAreaRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  postalCode     String
+  fsa            String   @db.Char(3)
+  createdAt      DateTime @default(now())
+
+  @@index([fsa])
+}

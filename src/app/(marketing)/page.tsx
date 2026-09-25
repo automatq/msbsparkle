@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Estimator } from "@/components/marketing/estimator";
 import { prisma } from "@/modules/db/client";
 
 export const revalidate = 3600;
@@ -34,13 +35,7 @@ export default async function HomePage() {
             </Button>
           </div>
         </div>
-        <div className="rounded-xl border bg-muted/30 p-6">
-          <h2 className="mb-2 font-medium">Instant quote</h2>
-          <p className="text-sm text-muted-foreground">
-            The price estimator lands here in milestone M1. For now, start a booking to see the
-            flow.
-          </p>
-        </div>
+        <Estimator />
       </section>
 
       <section className="mt-20">
