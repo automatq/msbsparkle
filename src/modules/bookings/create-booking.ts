@@ -94,7 +94,8 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
   }
 
   let paymentMethodId: string | null = null;
-  if (isStripeConfigured()) {
+  const staffOrder = input.source === "ADMIN" || input.source === "PHONE";
+  if (isStripeConfigured() && !staffOrder) {
     if (!input.setupIntentId)
       return {
         ok: false,
@@ -168,7 +169,7 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
             serviceId: service.id,
             paymentMethodId,
             bookingNumber,
-            source: "WEB",
+            source: input.source,
             status: "ACTIVE",
             frequency: quoteInput.frequency,
             anchorDate: localDateToDateColumn(input.scheduledDate),

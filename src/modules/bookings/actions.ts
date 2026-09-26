@@ -12,6 +12,8 @@ import { quoteRequestSchema, type QuoteRequest } from "@/modules/pricing/schemas
 import { findRegionByFsa, normalizePostal } from "@/modules/regions/lookup";
 import { loadAvailability, type DayAvailability } from "@/modules/scheduling/availability";
 import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/modules/shared/dates";
+import { hasRole } from "@/modules/auth/roles";
+import { getOptionalCtx } from "@/modules/auth/session";
 import { createBooking } from "./create-booking";
 import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
 
@@ -78,6 +80,7 @@ export async function availabilityAction(
 export async function prepareCheckoutAction(
   regionId: string,
   contactRaw: unknown,
+  staffOrder = false,
 ): Promise<
   | { ok: true; customerId: string; clientSecret: string | null; stripeConfigured: boolean }
   | { ok: false; message: string }
@@ -88,8 +91,11 @@ export async function prepareCheckoutAction(
     where: { id: regionId },
     select: { organizationId: true },
   });
-  const customer = await ensureCustomer(region.organizationId, { ...contact.data, source: "web" });
-  if (!isStripeConfigured())
+  const customer = await ensureCustomer(region.organizationId, {
+    ...contact.data,
+    source: staffOrder ? "phone" : "web",
+  });
+  if (!isStripeConfigured() || staffOrder)
     return { ok: true, customerId: customer.id, clientSecret: null, stripeConfigured: false };
   const si = await createSetupIntent(customer.stripeCustomerId!, customer.id);
   return {
@@ -110,6 +116,11 @@ export async function confirmBookingAction(
       code: "INVALID",
       message: parsed.error.issues[0]?.message ?? "Invalid booking.",
     };
+  if (parsed.data.source !== "WEB") {
+    const ctx = await getOptionalCtx();
+    if (!ctx || !hasRole(ctx.roles, "SUPER_ADMIN", "REGION_ADMIN"))
+      return { ok: false, code: "FORBIDDEN", message: "Staff login required for phone orders." };
+  }
   const result = await createBooking(parsed.data);
   if (!result.ok) return { ok: false, code: result.error.code, message: result.error.message };
   try {

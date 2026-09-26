@@ -67,10 +67,13 @@ export function BookingWizard({
   services,
   extras,
   initial,
+  adminMode = false,
 }: {
   services: ServiceOption[];
   extras: ExtraOption[];
   initial?: WizardInitial;
+  /** Staff phone orders: no card step, source ADMIN, lands on the admin bookings list. */
+  adminMode?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("Location");
@@ -156,24 +159,32 @@ export function BookingWizard({
     scheduledDate,
   ]);
 
-  // Re-quote (debounced) whenever inputs change past the location step.
+  // Re-quote (debounced) whenever pricing inputs change. Depends on the inputs only, so
+  // navigating between steps never cancels an in-flight quote.
   const quoteKey = JSON.stringify(quoteRequest);
   const latest = useRef(0);
-  useEffect(() => {
-    if (!quoteRequest || stepIndex < 1) return;
+  const fetchQuote = useCallback(async (req: QuoteRequest) => {
     const id = ++latest.current;
-    const t = setTimeout(async () => {
-      setQuoteLoading(true);
-      const res = await quoteAction(quoteRequest);
-      if (id !== latest.current) return;
-      setQuoteLoading(false);
-      if (res.ok) setQuote({ quoteId: res.data.quoteId, quote: res.data.quote });
-      else if (res.error.code === "INVALID_PROMO") toast.error(res.error.message);
-      else toast.error(res.error.message);
-    }, 300);
+    setQuoteLoading(true);
+    const res = await quoteAction(req);
+    if (id !== latest.current) return null;
+    setQuoteLoading(false);
+    if (res.ok) {
+      const next = { quoteId: res.data.quoteId, quote: res.data.quote };
+      setQuote(next);
+      return next;
+    }
+    setQuote(null);
+    toast.error(res.error.message);
+    return null;
+  }, []);
+  useEffect(() => {
+    if (!quoteRequest) return;
+    const req = quoteRequest;
+    const t = setTimeout(() => void fetchQuote(req), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteKey, stepIndex]);
+  }, [quoteKey, fetchQuote]);
 
   const go = useCallback((s: Step) => {
     setStep(s);
@@ -213,7 +224,7 @@ export function BookingWizard({
     e.preventDefault();
     if (!region) return;
     setBusy(true);
-    const res = await prepareCheckoutAction(region.id, contact);
+    const res = await prepareCheckoutAction(region.id, contact, adminMode);
     setBusy(false);
     if (!res.ok) {
       toast.error(res.message);
@@ -224,10 +235,15 @@ export function BookingWizard({
   }
 
   async function confirm(setupIntentId: string | null) {
-    if (!region || !quote || !quoteRequest || !scheduledDate || !windowId || !checkout) return;
+    if (!region || !quoteRequest || !scheduledDate || !windowId || !checkout) return;
     setBusy(true);
+    const current = quote && !quoteLoading ? quote : await fetchQuote(quoteRequest);
+    if (!current) {
+      setBusy(false);
+      return;
+    }
     const res = await confirmBookingAction({
-      quoteId: quote.quoteId,
+      quoteId: current.quoteId,
       quoteRequest,
       scheduledDate,
       windowId,
@@ -237,10 +253,15 @@ export function BookingWizard({
       setupIntentId,
       customerId: checkout.customerId,
       marketingConsent,
+      source: adminMode ? "ADMIN" : "WEB",
     });
     setBusy(false);
     if (res.ok) {
-      router.push(`/book/confirmation/${res.bookingNumber}`);
+      router.push(
+        adminMode
+          ? `/admin/bookings?q=${res.bookingNumber}`
+          : `/book/confirmation/${res.bookingNumber}`,
+      );
       return;
     }
     toast.error(res.message);
@@ -665,14 +686,15 @@ export function BookingWizard({
             ) : (
               <div className="space-y-4">
                 <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                  Payments are not configured in this environment. Your booking will be created
-                  without a card on file.
+                  {adminMode
+                    ? "Phone order: no card is collected here. The customer can add a card from their account, or payment is handled offline."
+                    : "Payments are not configured in this environment. Your booking will be created without a card on file."}
                 </p>
                 <Nav
                   onBack={() => go("Details")}
                   onNext={() => confirm(null)}
                   nextLabel={busy ? "Booking…" : "Confirm booking"}
-                  nextDisabled={busy}
+                  nextDisabled={busy || quoteLoading || !quote}
                 />
               </div>
             )}

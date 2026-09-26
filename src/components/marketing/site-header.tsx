@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
 
@@ -19,7 +19,9 @@ export function SiteHeader() {
             Customer login
           </Link>
         </nav>
-        <Button render={<Link href="/book" />}>Book online</Button>
+        <Link href="/book" className={buttonVariants()}>
+          Book online
+        </Link>
       </div>
     </header>
   );

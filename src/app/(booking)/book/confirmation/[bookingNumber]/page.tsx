@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { prisma } from "@/modules/db/client";
 import { formatInZone } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
@@ -72,7 +72,9 @@ export default async function ConfirmationPage({
         Free changes up to 24 hours before your arrival window. Sign in with your email to manage
         bookings.
       </p>
-      <Button render={<Link href="/login" />}>Manage my booking</Button>
+      <Link href="/login" className={buttonVariants()}>
+        Manage my booking
+      </Link>
     </div>
   );
 }

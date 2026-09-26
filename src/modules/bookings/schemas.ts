@@ -28,6 +28,7 @@ export const confirmBookingSchema = z.object({
   setupIntentId: z.string().nullable().optional(),
   customerId: z.string().min(1),
   marketingConsent: z.boolean().default(false),
+  source: z.enum(["WEB", "ADMIN", "PHONE"]).default("WEB"),
 });
 
 export type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>;

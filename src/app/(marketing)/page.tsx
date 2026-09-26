@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Estimator } from "@/components/marketing/estimator";
 import { prisma } from "@/modules/db/client";
 
@@ -27,12 +27,12 @@ export default async function HomePage() {
             is done.
           </p>
           <div className="flex gap-3">
-            <Button size="lg" render={<Link href="/book" />}>
+            <Link href="/book" className={buttonVariants({ size: "lg" })}>
               Get an instant price
-            </Button>
-            <Button size="lg" variant="outline" render={<Link href="/locations" />}>
+            </Link>
+            <Link href="/locations" className={buttonVariants({ variant: "outline", size: "lg" })}>
               See locations
-            </Button>
+            </Link>
           </div>
         </div>
         <Estimator />
