@@ -336,6 +336,71 @@ function expandFsas(r: RegionSeed): string[] {
   return [...set];
 }
 
+const CHECKLISTS: Record<string, { section: string; label: string; requiresPhoto?: boolean }[]> = {
+  standard: [
+    { section: "Kitchen", label: "Counters and backsplash wiped" },
+    { section: "Kitchen", label: "Stovetop and exterior of appliances" },
+    { section: "Kitchen", label: "Sink scrubbed and shined" },
+    { section: "Kitchen", label: "Floor vacuumed and mopped" },
+    { section: "Bathrooms", label: "Toilet, tub/shower, sink and mirror" },
+    { section: "Bathrooms", label: "Floor mopped, towels folded" },
+    { section: "Bedrooms & living", label: "Dusted surfaces and furniture" },
+    { section: "Bedrooms & living", label: "Beds made, floors vacuumed" },
+    { section: "Finish", label: "Trash emptied, lights off", requiresPhoto: true },
+  ],
+  deep: [
+    { section: "Kitchen", label: "Inside microwave, cabinet fronts, range hood" },
+    { section: "Kitchen", label: "Counters, sink, appliances exterior, floor" },
+    { section: "Bathrooms", label: "Grout and tile detail, fixtures descaled" },
+    { section: "Bathrooms", label: "Toilet, tub/shower, sink, mirror, floor" },
+    { section: "Whole home", label: "Baseboards, door frames, switch plates" },
+    { section: "Whole home", label: "Light fixtures and ceiling fans dusted" },
+    { section: "Whole home", label: "Vacuum under furniture, mop all floors" },
+    { section: "Finish", label: "After photos of each room", requiresPhoto: true },
+  ],
+};
+
+async function seedChecklists(organizationId: string) {
+  for (const [slug, items] of Object.entries(CHECKLISTS)) {
+    const service = await prisma.service.findUnique({
+      where: { organizationId_slug: { organizationId, slug } },
+    });
+    if (!service) continue;
+    let template = service.checklistTemplateId
+      ? await prisma.checklistTemplate.findUnique({ where: { id: service.checklistTemplateId } })
+      : null;
+    if (!template) {
+      template = await prisma.checklistTemplate.create({
+        data: {
+          organizationId,
+          name: `${service.name} checklist`,
+          items: {
+            create: items.map((i, sortOrder) => ({
+              ...i,
+              sortOrder,
+              requiresPhoto: !!i.requiresPhoto,
+            })),
+          },
+        },
+      });
+      await prisma.service.update({
+        where: { id: service.id },
+        data: { checklistTemplateId: template.id },
+      });
+    }
+  }
+  // Services without a dedicated template use the standard one.
+  const std = await prisma.service.findUnique({
+    where: { organizationId_slug: { organizationId, slug: "standard" } },
+  });
+  if (std?.checklistTemplateId) {
+    await prisma.service.updateMany({
+      where: { organizationId, checklistTemplateId: null, pricingModel: "FLAT" },
+      data: { checklistTemplateId: std.checklistTemplateId },
+    });
+  }
+}
+
 async function main() {
   const org = await prisma.organization.upsert({
     where: { slug: ORG_SLUG },
@@ -407,6 +472,8 @@ async function main() {
       },
     });
   }
+
+  await seedChecklists(org.id);
 
   // Default (org-wide) pricing table v1
   let table = await prisma.pricingTable.findFirst({
@@ -569,22 +636,23 @@ async function seedDemo(organizationId: string) {
   ] as const;
   for (const c of cleaners) {
     const email = `${c.first}.${c.last}@cleaners.msbsparkle.local`.toLowerCase();
+    const phone = `+1416555${String(1000 + cleaners.indexOf(c)).padStart(4, "0")}`;
     const user = await prisma.user.upsert({
       where: { organizationId_email: { organizationId, email } },
-      update: {},
-      create: { organizationId, email, name: `${c.first} ${c.last}`, phone: "+14165550000" },
+      update: { phone },
+      create: { organizationId, email, name: `${c.first} ${c.last}`, phone },
     });
     await ensureRole(user.id, "CLEANER");
     const cleaner = await prisma.cleaner.upsert({
       where: { organizationId_email: { organizationId, email } },
-      update: {},
+      update: { phone },
       create: {
         organizationId,
         userId: user.id,
         firstName: c.first,
         lastName: c.last,
         email,
-        phone: "+14165550000",
+        phone,
         status: "ACTIVE",
         backgroundCheckStatus: "CLEARED",
         backgroundCheckAt: new Date(),

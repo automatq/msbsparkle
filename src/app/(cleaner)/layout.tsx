@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/modules/auth/session";
 
 export default async function CleanerLayout({ children }: LayoutProps<"/">) {
-  await requireRole("/login", "CLEANER", "SUPER_ADMIN");
+  await requireRole("/login/phone", "CLEANER", "SUPER_ADMIN");
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 p-4 pb-20">{children}</main>

@@ -34,7 +34,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         Email me a link
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        Staff?{" "}
+        Cleaner?{" "}
+        <a href="/login/phone" className="underline">
+          Sign in with your mobile
+        </a>{" "}
+        · Staff?{" "}
         <a href="/admin/login" className="underline">
           Admin login
         </a>

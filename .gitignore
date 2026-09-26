@@ -44,3 +44,4 @@ src/generated/
 # playwright
 /test-results/
 /playwright-report/
+uploads/

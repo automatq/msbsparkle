@@ -6,6 +6,7 @@ import Resend from "next-auth/providers/resend";
 import { z } from "zod";
 import { prisma } from "@/modules/db/client";
 import { edgeAuthConfig } from "./edge-config";
+import { verifyOtp } from "./otp";
 import { verifyPassword } from "./password";
 import type { RoleClaim } from "./roles";
 import { decryptSecret, verifyTotp } from "./totp";
@@ -57,6 +58,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     emailProvider(),
+    Credentials({
+      id: "phone-otp",
+      name: "Mobile code",
+      credentials: {
+        phone: { label: "Mobile", type: "tel" },
+        code: { label: "Code", type: "text" },
+      },
+      async authorize(raw) {
+        const phone = typeof raw?.phone === "string" ? raw.phone : "";
+        const code = typeof raw?.code === "string" ? raw.code : "";
+        const userId = await verifyOtp(phone, code);
+        if (!userId) return null;
+        const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+        return { id: user.id, email: user.email, name: user.name, amr: ["otp"] } as never;
+      },
+    }),
     Credentials({
       id: "admin-credentials",
       name: "Admin login",

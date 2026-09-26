@@ -26,7 +26,7 @@ export const proxy = auth((req) => {
     if (!hasRole(roles, "SUPER_ADMIN", "REGION_ADMIN")) return redirectTo("/");
   }
   if (pathname.startsWith("/cleaner")) {
-    if (!signedIn) return redirectTo("/login");
+    if (!signedIn) return redirectTo("/login/phone");
     if (!hasRole(roles, "CLEANER", "SUPER_ADMIN")) return redirectTo("/");
   }
   if (pathname.startsWith("/account")) {
