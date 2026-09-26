@@ -15,13 +15,14 @@ pnpm dev                        # http://localhost:3000
 
 Seeded logins (dev):
 
-| Role         | Email                              | Password    |
-| ------------ | ---------------------------------- | ----------- |
-| Super admin  | admin@msbsparkle.local             | admin12345! |
-| Region admin | calgary.admin@msbsparkle.local     | admin12345! |
-| Customers    | any email via magic link (Mailpit) | –           |
+| Role         | How to sign in                                                                 |
+| ------------ | ------------------------------------------------------------------------------ |
+| Super admin  | `/admin/login` · admin@msbsparkle.local / admin12345!                          |
+| Region admin | `/admin/login` · calgary.admin@msbsparkle.local / admin12345! (Calgary only)   |
+| Cleaner      | `/login/phone` · mobile 416 555 1000 (Amara) … 1004; code arrives in Mailpit   |
+| Customer     | `/login` · any email you booked with; magic link arrives in Mailpit            |
 
-Admin login: `/admin/login`. Customer/cleaner login: `/login` (magic link lands in Mailpit at http://localhost:8025).
+Mailpit inbox: http://localhost:8025. Without Twilio, cleaner sign-in codes are emailed instead of texted.
 
 ## Scripts
 

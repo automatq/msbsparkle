@@ -69,8 +69,9 @@ test.describe("admin dispatch", () => {
     await page.goto(`/admin/jobs?from=2020-01-01&to=2030-01-01&q=${bookingNumber}`);
     await page.locator("table tbody tr td a").first().click();
     await page.getByRole("combobox").first().selectOption({ label: "Amara Okafor" });
+    await page.getByLabel("Ignore conflicts").check(); // other specs may have booked the same window
     await page.getByRole("button", { name: "Assign", exact: true }).click();
-    await expect(page.getByText("Done")).toBeVisible();
+    await expect(page.getByText("Done").first()).toBeVisible();
     await expect(page.locator("main").getByText("ASSIGNED", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Amara Okafor" })).toBeVisible();
     await expect(page.getByText("CONFIRMED → ASSIGNED")).toBeVisible();

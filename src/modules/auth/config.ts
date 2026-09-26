@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
+import type { Adapter } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Resend from "next-auth/providers/resend";
@@ -53,9 +54,55 @@ function emailProvider() {
   });
 }
 
+/**
+ * Prisma adapter with org-aware user lookup/creation: our User.email is unique per
+ * organization (not globally) and organizationId is required. v1 has a single organization.
+ */
+function orgAwareAdapter(): Adapter {
+  const base = PrismaAdapter(prisma);
+  return {
+    ...base,
+    async getUserByEmail(email) {
+      const user = await prisma.user.findFirst({
+        where: { email: email.toLowerCase() },
+        orderBy: { createdAt: "asc" },
+      });
+      return user
+        ? {
+            id: user.id,
+            email: user.email,
+            emailVerified: user.emailVerified,
+            name: user.name,
+            image: user.image,
+          }
+        : null;
+    },
+    async createUser(data) {
+      const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });
+      const user = await prisma.user.create({
+        data: {
+          organizationId: org.id,
+          email: data.email.toLowerCase(),
+          emailVerified: data.emailVerified ?? null,
+          name: data.name ?? null,
+          image: data.image ?? null,
+          status: "ACTIVE",
+        },
+      });
+      return {
+        id: user.id,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        name: user.name,
+        image: user.image,
+      };
+    },
+  };
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...edgeAuthConfig,
-  adapter: PrismaAdapter(prisma),
+  adapter: orgAwareAdapter(),
   providers: [
     emailProvider(),
     Credentials({
@@ -119,9 +166,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...edgeAuthConfig.callbacks,
     async signIn({ user }) {
-      if (!user.id) return false;
-      const u = await prisma.user.findUnique({ where: { id: user.id }, select: { status: true } });
-      return !!u && u.status !== "DISABLED";
+      // Email providers call this before the user row exists; only block disabled accounts.
+      const email = user.email?.toLowerCase();
+      const existing = user.id
+        ? await prisma.user.findUnique({ where: { id: user.id }, select: { status: true } })
+        : email
+          ? await prisma.user.findFirst({ where: { email }, select: { status: true } })
+          : null;
+      return !existing || existing.status !== "DISABLED";
     },
     async jwt({ token, user, trigger }) {
       const now = Date.now();
