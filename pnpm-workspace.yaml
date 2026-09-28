@@ -8,3 +8,4 @@ allowBuilds:
   "@prisma/client": true
   "@node-rs/argon2": true
   protobufjs: set this to true or false
+  protobufjs: false
