@@ -6,6 +6,7 @@ import { getCtx } from "@/modules/auth/session";
 import { createEarningForAssignment } from "@/modules/cleaner/earnings";
 import { prisma } from "@/modules/db/client";
 import { transitionJob, type Actor } from "@/modules/jobs/state-machine";
+import { emit } from "@/modules/jobs/client";
 import { putObject } from "@/modules/storage/local";
 
 export type CleanerActionResult =
@@ -263,6 +264,7 @@ export async function checkOutAction(
         }
       }
     });
+    if (completed) await emit("job/completed", { jobId });
     revalidate(jobId);
     revalidatePath("/cleaner/earnings");
     return { ok: true, message: completed ? "Job complete. Nice work!" : "Checked out" };

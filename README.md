@@ -15,14 +15,29 @@ pnpm dev                        # http://localhost:3000
 
 Seeded logins (dev):
 
-| Role         | How to sign in                                                                 |
-| ------------ | ------------------------------------------------------------------------------ |
-| Super admin  | `/admin/login` · admin@msbsparkle.local / admin12345!                          |
-| Region admin | `/admin/login` · calgary.admin@msbsparkle.local / admin12345! (Calgary only)   |
-| Cleaner      | `/login/phone` · mobile 416 555 1000 (Amara) … 1004; code arrives in Mailpit   |
-| Customer     | `/login` · any email you booked with; magic link arrives in Mailpit            |
+| Role         | How to sign in                                                               |
+| ------------ | ---------------------------------------------------------------------------- |
+| Super admin  | `/admin/login` · admin@msbsparkle.local / admin12345!                        |
+| Region admin | `/admin/login` · calgary.admin@msbsparkle.local / admin12345! (Calgary only) |
+| Cleaner      | `/login/phone` · mobile 416 555 1000 (Amara) … 1004; code arrives in Mailpit |
+| Customer     | `/login` · any email you booked with; magic link arrives in Mailpit          |
 
 Mailpit inbox: http://localhost:8025. Without Twilio, cleaner sign-in codes are emailed instead of texted.
+
+## Background jobs (Inngest)
+
+Reminders, price lock, automatic charging with retries, nightly series generation, cleaner alerts, review requests and the admin digest run as Inngest functions (`src/modules/jobs`). Locally:
+
+```bash
+pnpm dev:inngest            # Inngest dev server + UI at http://localhost:8288 (keep INNGEST_DEV=1 in .env)
+```
+
+Every task is also callable without Inngest for testing or as a Vercel Cron fallback:
+
+```bash
+curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_SECRET" \
+  -H 'content-type: application/json' -d '{"task":"reminders"}'   # reminders | cutoff | series | retries | digest | charge | review
+```
 
 ## Scripts
 

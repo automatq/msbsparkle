@@ -8,6 +8,8 @@ import { cancelBooking, cancelJob, pauseBooking, resumeBooking } from "@/modules
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
+import { emit } from "@/modules/jobs/client";
+import { createEarningForAssignment } from "@/modules/cleaner/earnings";
 import { createServiceCharge, refundCharge, waiveJobPayment } from "@/modules/payments/charges";
 import { assignCleaner, rescheduleJob, unassignCleaner } from "@/modules/scheduling/assignment";
 import { loadAvailability } from "@/modules/scheduling/availability";
@@ -100,9 +102,14 @@ export async function transitionAction(
   try {
     const ctx = await adminCtx();
     assertRegionAccess(ctx, await jobRegionId(jobId));
-    await prisma.$transaction((tx) =>
-      transitionJob(tx, jobId, to, actorOf(ctx), note ? { note } : {}),
-    );
+    await prisma.$transaction(async (tx) => {
+      await transitionJob(tx, jobId, to, actorOf(ctx), note ? { note } : {});
+      if (to === "COMPLETED") {
+        const accepted = await tx.assignment.findMany({ where: { jobId, status: "ACCEPTED" } });
+        for (const a of accepted) await createEarningForAssignment(tx, a.id);
+      }
+    });
+    if (to === "COMPLETED") await emit("job/completed", { jobId });
     revalidateJob(jobId);
     return { ok: true };
   } catch (e) {

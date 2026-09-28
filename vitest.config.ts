@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
+    setupFiles: ["./vitest.setup.ts"],
+    fileParallelism: false,
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: ["node_modules", ".next", "e2e"],
   },

@@ -20,6 +20,8 @@ export const env = createEnv({
     TWILIO_FROM_NUMBER: z.string().optional(),
     INNGEST_EVENT_KEY: z.string().optional(),
     INNGEST_SIGNING_KEY: z.string().optional(),
+    CRON_SECRET: z.string().optional(),
+    CHARGE_GRACE_MINUTES: z.coerce.number().optional(),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
   client: {
@@ -47,6 +49,8 @@ export const env = createEnv({
     TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
+    CRON_SECRET: process.env.CRON_SECRET,
+    CHARGE_GRACE_MINUTES: process.env.CHARGE_GRACE_MINUTES,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_BRAND_NAME: process.env.NEXT_PUBLIC_BRAND_NAME,

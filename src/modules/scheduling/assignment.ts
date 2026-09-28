@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
+import { emit } from "@/modules/jobs/client";
 
 export type AssignmentConflict = { jobId: string; bookingNumber: string; start: Date; end: Date };
 
@@ -158,6 +159,7 @@ export async function assignCleaner(
     }
     return a.id;
   });
+  await emit("job/assigned", { jobId, cleanerId, offered: status === "OFFERED" });
   return { ok: true, assignmentId, warnings };
 }
 

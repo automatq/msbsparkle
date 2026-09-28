@@ -14,6 +14,7 @@ import { loadAvailability, type DayAvailability } from "@/modules/scheduling/ava
 import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/modules/shared/dates";
 import { hasRole } from "@/modules/auth/roles";
 import { getOptionalCtx } from "@/modules/auth/session";
+import { emit } from "@/modules/jobs/client";
 import { createBooking } from "./create-booking";
 import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
 
@@ -128,6 +129,7 @@ export async function confirmBookingAction(
   } catch (e) {
     console.error("confirmation email failed", e);
   }
+  await emit("booking/confirmed", { bookingId: result.bookingId });
   return { ok: true, bookingNumber: result.bookingNumber };
 }
 

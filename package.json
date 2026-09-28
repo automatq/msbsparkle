@@ -19,7 +19,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -44,6 +45,7 @@
     "cn": "^0.4.0",
     "date-fns": "^4.4.0",
     "dotenv": "^18.0.3",
+    "inngest": "^4.21.0",
     "lucide-react": "^1.48.0",
     "next": "16.3.6",
     "next-auth": "5.0.0-beta.32",
