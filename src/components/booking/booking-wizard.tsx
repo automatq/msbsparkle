@@ -19,6 +19,8 @@ import {
 import type { QuoteRequest } from "@/modules/pricing/schemas";
 import type { QuoteResult } from "@/modules/pricing/types";
 import type { DayAvailability } from "@/modules/scheduling/availability";
+import { checkGiftCardAction } from "@/modules/gift-cards/actions";
+import { formatCents } from "@/modules/shared/money";
 import { CardStep } from "./card-step";
 import { QuoteSummary } from "./quote-summary";
 
@@ -92,6 +94,8 @@ export function BookingWizard({
   );
   const [upgrade, setUpgrade] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftBalance, setGiftBalance] = useState<number | null>(null);
   const [availability, setAvailability] = useState<DayAvailability[] | null>(null);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);
   const [windowId, setWindowId] = useState<string | null>(null);
@@ -254,6 +258,7 @@ export function BookingWizard({
       customerId: checkout.customerId,
       marketingConsent,
       source: adminMode ? "ADMIN" : "WEB",
+      giftCardCode: giftBalance !== null ? giftCardCode : "",
     });
     setBusy(false);
     if (res.ok) {
@@ -481,6 +486,44 @@ export function BookingWizard({
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 placeholder="Optional"
               />
+            </div>
+            <div className="max-w-xs space-y-2">
+              <Label htmlFor="gift">Gift card</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="gift"
+                  value={giftCardCode}
+                  onChange={(e) => {
+                    setGiftCardCode(e.target.value.toUpperCase());
+                    setGiftBalance(null);
+                  }}
+                  placeholder="GC-XXXX-XXXX-XXXX"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!giftCardCode}
+                  onClick={async () => {
+                    const r = await checkGiftCardAction(giftCardCode);
+                    if (r.ok) {
+                      setGiftBalance(r.balanceCents);
+                      setGiftCardCode(r.code);
+                    } else {
+                      setGiftBalance(null);
+                      toast.error(r.message);
+                    }
+                  }}
+                  data-testid="gift-apply"
+                >
+                  Apply
+                </Button>
+              </div>
+              {giftBalance !== null ? (
+                <p className="text-xs text-emerald-700" data-testid="gift-balance">
+                  {formatCents(giftBalance)} on this card will be applied when your clean is
+                  charged.
+                </p>
+              ) : null}
             </div>
             <Nav onBack={() => go("Extras")} onNext={enterDateStep} />
           </div>

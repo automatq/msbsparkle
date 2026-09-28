@@ -8,6 +8,7 @@ import { normalizePostal } from "@/modules/regions/lookup";
 import { loadAvailability } from "@/modules/scheduling/availability";
 import { materializeJobs } from "@/modules/scheduling/materialize";
 import { localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
+import { lookupGiftCard } from "@/modules/gift-cards/service";
 import { generateBookingNumber } from "./booking-number";
 import type { ConfirmBookingInput } from "./schemas";
 
@@ -131,6 +132,19 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
         })
       )?.id ?? null)
     : null;
+  let giftCardId: string | null = null;
+  if (input.giftCardCode) {
+    const gc = await lookupGiftCard(input.giftCardCode);
+    if (!gc)
+      return {
+        ok: false,
+        error: {
+          code: "INVALID_ADDRESS",
+          message: "That gift card isn't valid or has no balance.",
+        },
+      };
+    giftCardId = gc.id;
+  }
 
   try {
     const result = await prisma.$transaction(
@@ -184,6 +198,7 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
             firstCleanUpgradeServiceId: upgrade?.id ?? null,
             customerNotes: input.customerNotes || null,
             promoCodeId: promoId,
+            giftCardId,
             marketingConsentAt: input.marketingConsent ? new Date() : null,
           },
         });

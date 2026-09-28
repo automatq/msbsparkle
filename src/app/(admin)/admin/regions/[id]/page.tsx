@@ -117,7 +117,17 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
           <CardTitle>Service area</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>Cities: {r.cities.map((c) => c.name).join(", ")}</p>
+          <p>
+            City pages:{" "}
+            {r.cities.map((c, i) => (
+              <span key={c.id}>
+                {i ? ", " : ""}
+                <Link href={`/admin/cities/${c.id}`} className="underline">
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
           <p className="text-xs text-muted-foreground">
             Postal areas (FSA): {r.serviceAreas.map((a) => a.fsa).join(" ")}
           </p>

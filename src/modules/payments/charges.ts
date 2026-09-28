@@ -38,12 +38,24 @@ export async function createServiceCharge(
     job.booking.paymentMethod ??
     job.customer.paymentMethods.find((p) => p.id === job.customer.defaultPaymentMethodId) ??
     job.customer.paymentMethods[0];
-  if (!pm) return { ok: false, code: "NO_CARD", message: "No card on file for this customer." };
   const stripe = getStripe();
-  if (!stripe) return { ok: false, code: "NO_STRIPE", message: "Stripe is not configured." };
-
   const amount = job.activeQuote.totalCents + job.tipCents;
   const idempotencyKey = `job:${job.id}:service:${job.activeQuote.id}`;
+  const existing = await prisma.charge.findUnique({ where: { idempotencyKey } });
+
+  // Gift card balance is applied once, on the first attempt; the card pays the remainder.
+  let giftCardCents = existing?.giftCardCents ?? 0;
+  const giftCard = job.booking.giftCardId
+    ? await prisma.giftCard.findUnique({ where: { id: job.booking.giftCardId } })
+    : null;
+  if (!existing && giftCard && giftCard.status === "ACTIVE" && giftCard.balanceCents > 0)
+    giftCardCents = Math.min(giftCard.balanceCents, amount);
+  const cardCents = amount - giftCardCents;
+  if (cardCents > 0 && !pm)
+    return { ok: false, code: "NO_CARD", message: "No card on file for this customer." };
+  if (cardCents > 0 && !stripe)
+    return { ok: false, code: "NO_STRIPE", message: "Stripe is not configured." };
+
   const charge = await prisma.charge.upsert({
     where: { idempotencyKey },
     update: {
@@ -59,17 +71,49 @@ export async function createServiceCharge(
       type: "SERVICE",
       quoteId: job.activeQuote.id,
       amountCents: amount,
-      cardCents: amount,
-      paymentMethodId: pm.id,
+      giftCardCents,
+      cardCents,
+      paymentMethodId: pm?.id ?? null,
       idempotencyKey,
       attemptCount: 1,
     },
   });
+  if (!existing && giftCardCents > 0 && giftCard) {
+    await prisma.$transaction(async (tx) => {
+      const gc = await tx.giftCard.update({
+        where: { id: giftCard.id },
+        data: { balanceCents: { decrement: giftCardCents } },
+      });
+      if (gc.balanceCents <= 0)
+        await tx.giftCard.update({ where: { id: gc.id }, data: { status: "DEPLETED" } });
+      await tx.giftCardRedemption.create({
+        data: { giftCardId: gc.id, chargeId: charge.id, amountCents: giftCardCents },
+      });
+    });
+  }
+  if (charge.cardCents === 0) {
+    await prisma.charge.update({
+      where: { id: charge.id },
+      data: { status: "CAPTURED", capturedAt: new Date() },
+    });
+    await prisma.job.update({ where: { id: job.id }, data: { paymentStatus: "PAID" } });
+    await prisma.jobEvent.create({
+      data: {
+        jobId: job.id,
+        type: "PAYMENT",
+        actorType: actor.type,
+        actorId: actor.id ?? null,
+        data: { chargeId: charge.id, status: "CAPTURED", giftCardCents },
+      },
+    });
+    return { ok: true, chargeId: charge.id, status: "CAPTURED" };
+  }
+  if (!stripe || !pm) return { ok: false, code: "NO_STRIPE", message: "Stripe is not configured." };
 
   try {
     const pi = await stripe.paymentIntents.create(
       {
-        amount,
+        amount: charge.cardCents,
         currency: "cad",
         customer: job.customer.stripeCustomerId!,
         payment_method: pm.stripePaymentMethodId,

@@ -9,8 +9,18 @@ export default async function HomePage() {
   const regions = await prisma.region.findMany({
     where: { status: "ACTIVE" },
     orderBy: { name: "asc" },
-    select: { slug: true, name: true, province: true },
+    select: {
+      slug: true,
+      name: true,
+      province: true,
+      cities: {
+        where: { active: true },
+        orderBy: { name: "asc" },
+        select: { slug: true, name: true },
+      },
+    },
   });
+  const cityCount = regions.reduce((n, r) => n + r.cities.length, 0);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -39,14 +49,32 @@ export default async function HomePage() {
       </section>
 
       <section className="mt-20">
-        <h2 className="text-2xl font-semibold">Serving {regions.length} regions across Canada</h2>
+        <h2 className="text-2xl font-semibold">
+          Serving {cityCount} cities across {regions.length} regions in Canada
+        </h2>
         <ul className="mt-4 flex flex-wrap gap-2 text-sm">
-          {regions.map((r) => (
-            <li key={r.slug} className="rounded-full border px-3 py-1">
-              {r.name}, {r.province}
-            </li>
-          ))}
+          {regions.flatMap((r) =>
+            r.cities.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/house-cleaning-service-${c.slug}`}
+                  className="inline-block rounded-full border px-3 py-1 hover:bg-muted/40"
+                >
+                  {c.name}, {r.province}
+                </Link>
+              </li>
+            )),
+          )}
         </ul>
+        <p className="mt-3 text-sm">
+          <Link href="/locations" className="underline">
+            All locations
+          </Link>{" "}
+          ·{" "}
+          <Link href="/services" className="underline">
+            All services
+          </Link>
+        </p>
       </section>
     </div>
   );

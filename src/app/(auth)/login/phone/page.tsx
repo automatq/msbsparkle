@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -68,9 +69,9 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
           Text me a code
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          <a href="/login" className="underline">
+          <Link href="/login" className="underline">
             Customer? Sign in with email
-          </a>
+          </Link>
         </p>
       </form>
     );
@@ -108,9 +109,9 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
         Sign in
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        <a href="/login/phone" className="underline">
+        <Link href="/login/phone" className="underline">
           Use a different number
-        </a>
+        </Link>
       </p>
     </form>
   );

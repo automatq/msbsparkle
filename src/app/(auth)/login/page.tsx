@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,13 +36,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         Cleaner?{" "}
-        <a href="/login/phone" className="underline">
+        <Link href="/login/phone" className="underline">
           Sign in with your mobile
-        </a>{" "}
+        </Link>{" "}
         · Staff?{" "}
-        <a href="/admin/login" className="underline">
+        <Link href="/admin/login" className="underline">
           Admin login
-        </a>
+        </Link>
       </p>
     </form>
   );

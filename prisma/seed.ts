@@ -408,7 +408,12 @@ async function main() {
     create: {
       slug: ORG_SLUG,
       name: "MSB Sparkle",
-      settings: { supportEmail: "hello@msbsparkle.ca", supportPhone: "1-888-555-0199" },
+      settings: {
+        supportEmail: "hello@msbsparkle.ca",
+        supportPhone: "1-888-555-0199",
+        googleRating: 4.8,
+        googleReviewCount: 3135,
+      },
     },
   });
 
@@ -584,6 +589,59 @@ async function main() {
     },
   });
   await ensureRole(admin.id, "SUPER_ADMIN");
+
+  await prisma.city.updateMany({
+    where: { slug: "toronto", neighborhoods: { isEmpty: true } },
+    data: {
+      neighborhoods: [
+        "Downtown",
+        "King West",
+        "Liberty Village",
+        "The Annex",
+        "Leslieville",
+        "Yorkville",
+        "High Park",
+        "Midtown",
+      ],
+    },
+  });
+  await prisma.city.updateMany({
+    where: { slug: "calgary", neighborhoods: { isEmpty: true } },
+    data: {
+      neighborhoods: ["Beltline", "Kensington", "Inglewood", "Mission", "Bridgeland", "Marda Loop"],
+    },
+  });
+  await prisma.city.updateMany({
+    where: { slug: "vancouver", neighborhoods: { isEmpty: true } },
+    data: {
+      neighborhoods: ["Yaletown", "Kitsilano", "Mount Pleasant", "West End", "Gastown", "Fairview"],
+    },
+  });
+  await prisma.organization.update({
+    where: { id: org.id },
+    data: {
+      settings: {
+        supportEmail: "hello@msbsparkle.ca",
+        supportPhone: "1-888-555-0199",
+        googleRating: 4.8,
+        googleReviewCount: 3135,
+      },
+    },
+  });
+  await prisma.promoCode.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: "WELCOME10" } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: "WELCOME10",
+      type: "PERCENT",
+      value: 1000,
+      appliesTo: "FIRST_JOB",
+      maxDiscountCents: 5000,
+      perCustomerLimit: 1,
+      newCustomersOnly: true,
+    },
+  });
 
   if (process.env.NODE_ENV !== "production") {
     await seedDemo(org.id);

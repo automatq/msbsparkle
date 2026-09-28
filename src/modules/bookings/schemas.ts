@@ -29,6 +29,7 @@ export const confirmBookingSchema = z.object({
   customerId: z.string().min(1),
   marketingConsent: z.boolean().default(false),
   source: z.enum(["WEB", "ADMIN", "PHONE"]).default("WEB"),
+  giftCardCode: z.string().trim().max(24).optional().or(z.literal("")),
 });
 
 export type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>;

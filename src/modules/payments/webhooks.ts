@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { prisma } from "@/modules/db/client";
+import { issueGiftCard } from "@/modules/gift-cards/service";
 
 /** Reconcile local state from Stripe events. Handlers must be idempotent. */
 export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
@@ -94,6 +95,21 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await prisma.charge.updateMany({
         where: { stripePaymentIntentId: piId },
         data: { status: "DISPUTED" },
+      });
+      return;
+    }
+    case "checkout.session.completed": {
+      const cs = event.data.object;
+      const m = cs.metadata ?? {};
+      if (m.kind !== "GIFT_CARD" || cs.payment_status !== "paid") return;
+      if (await prisma.giftCard.findFirst({ where: { purchaseChargeId: cs.id } })) return;
+      await issueGiftCard({
+        organizationId: m.organizationId,
+        amountCents: Number(m.amountCents),
+        purchaserEmail: m.purchaserEmail || cs.customer_email || "",
+        recipientEmail: m.recipientEmail || null,
+        message: m.message || null,
+        purchaseChargeId: cs.id,
       });
       return;
     }
