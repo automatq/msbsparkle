@@ -21,11 +21,18 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      mailpit:
+        image: axllent/mailpit:latest
+        ports: ["1025:1025", "8025:8025"]
     env:
       DATABASE_URL: postgresql://sparkle:sparkle@localhost:5432/sparkle?schema=public
       AUTH_SECRET: ci-secret-not-for-production
       AUTH_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       EMAIL_FROM: "CI <ci@example.com>"
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      CRON_SECRET: ci-cron-secret
+      CHARGE_GRACE_MINUTES: "0"
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       SEED_ADMIN_EMAIL: admin@msbsparkle.local
       SEED_ADMIN_PASSWORD: admin12345!
