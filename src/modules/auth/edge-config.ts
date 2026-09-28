@@ -31,6 +31,8 @@ declare module "next-auth/jwt" {
  * The full config in ./config.ts spreads this and adds adapter + providers.
  */
 export const edgeAuthConfig = {
+  // Deployed behind a trusted proxy (Vercel) and used with AUTH_URL; also lets CI hit `next start` on localhost.
+  trustHost: true,
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 },
   pages: { signIn: "/login", verifyRequest: "/verify", error: "/login" },
   providers: [],
