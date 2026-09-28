@@ -28,6 +28,7 @@ jobs:
       DATABASE_URL: postgresql://sparkle:sparkle@localhost:5432/sparkle?schema=public
       SHADOW_DATABASE_URL: postgresql://sparkle:sparkle@localhost:5432/sparkle_shadow
       AUTH_SECRET: ci-secret-not-for-production
+      AUTH_URL: http://localhost:3000
       AUTH_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       EMAIL_FROM: "CI <ci@example.com>"
       SMTP_HOST: localhost

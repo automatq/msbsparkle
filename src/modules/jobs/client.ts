@@ -13,6 +13,8 @@ export async function emit<K extends keyof Events>(
   name: K,
   data: Events[K]["data"],
 ): Promise<boolean> {
+  // No transport configured (neither the local dev server nor a cloud event key): skip quietly.
+  if (!process.env.INNGEST_DEV && !process.env.INNGEST_EVENT_KEY) return false;
   try {
     await inngest.send({ name, data });
     return true;
