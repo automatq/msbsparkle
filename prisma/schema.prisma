@@ -1,0 +1,1397 @@
+// MSB Sparkle data model. See ~/.claude plan for rationale.
+// Money is always integer cents (CAD). Instants are timestamptz (UTC).
+// Scheduling truth = scheduledDate + local window + region timezone; UTC instants are derived.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum Province {
+  ON
+  AB
+  BC
+}
+
+enum RegionStatus {
+  ACTIVE
+  COMING_SOON
+  PAUSED
+}
+
+enum FeeType {
+  FIXED
+  PERCENT
+}
+
+enum CapacityMode {
+  FIXED
+  DERIVED
+}
+
+enum PricingModel {
+  FLAT
+  HOURLY
+}
+
+enum ExtraUnit {
+  FIXED
+  PER_UNIT
+}
+
+enum PricingTableStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RateKind {
+  BASE
+  BEDROOM
+  BATHROOM
+  SQFT_BAND
+  SERVICE_SURCHARGE
+  FIRST_CLEAN_UPGRADE
+  EXTRA
+  HOURLY_RATE
+  HOURLY_MIN
+  FREQUENCY_DISCOUNT
+  MIN_JOB
+}
+
+enum Role {
+  SUPER_ADMIN
+  REGION_ADMIN
+  CLEANER
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum CleanerStatus {
+  ONBOARDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum BgCheckStatus {
+  PENDING
+  CLEARED
+  FAILED
+  EXPIRED
+}
+
+enum PayType {
+  HOURLY
+  PERCENT_OF_JOB
+  FLAT_PER_JOB
+}
+
+enum Skill {
+  DEEP_CLEAN
+  MOVE_OUT
+  POST_RENO
+  COMMERCIAL
+  AIRBNB
+  LEAD
+}
+
+enum TimeOffStatus {
+  REQUESTED
+  APPROVED
+  DENIED
+}
+
+enum PaymentMethodStatus {
+  ACTIVE
+  DETACHED
+  EXPIRED
+}
+
+enum BookingSource {
+  WEB
+  ADMIN
+  PHONE
+  API
+}
+
+enum BookingStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  CANCELLED
+  COMPLETED
+}
+
+enum Frequency {
+  ONE_TIME
+  WEEKLY
+  BIWEEKLY
+  EVERY_4_WEEKS
+}
+
+enum JobStatus {
+  PENDING
+  CONFIRMED
+  ASSIGNED
+  EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  SKIPPED
+  NO_SHOW
+}
+
+enum JobPaymentStatus {
+  UNPAID
+  AUTHORIZED
+  PAID
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  WAIVED
+}
+
+enum CancellationType {
+  FREE
+  LATE
+  NO_SHOW
+  SKIPPED
+}
+
+enum ActorType {
+  CUSTOMER
+  CLEANER
+  ADMIN
+  SYSTEM
+  STRIPE
+}
+
+enum AssignmentRole {
+  LEAD
+  MEMBER
+}
+
+enum AssignmentStatus {
+  OFFERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REMOVED
+}
+
+enum JobEventType {
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  RESCHEDULED
+  REPRICED
+  NOTE
+  CHECKLIST
+  PHOTO
+  OVER_CAPACITY
+  GEOFENCE_WARNING
+  PAYMENT
+}
+
+enum QuoteReason {
+  BOOKING
+  REGENERATION
+  CUSTOMER_EDIT
+  ADMIN_ADJUSTMENT
+  TAX_CHANGE
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum PromoScope {
+  FIRST_JOB
+  ALL_JOBS
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  DEPLETED
+  VOID
+}
+
+enum ChargeType {
+  SERVICE
+  TIP
+  CANCELLATION_FEE
+  GIFT_CARD_PURCHASE
+  ADJUSTMENT
+}
+
+enum ChargeStatus {
+  PENDING
+  AUTHORIZED
+  REQUIRES_ACTION
+  CAPTURED
+  FAILED
+  FAILED_FINAL
+  CANCELED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  DISPUTED
+  WAIVED
+}
+
+enum RefundReason {
+  QUALITY
+  CANCELLED
+  DUPLICATE
+  GOODWILL
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum EarningStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+}
+
+enum PayoutMethod {
+  MANUAL
+  STRIPE_CONNECT
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PhotoKind {
+  BEFORE
+  AFTER
+  ISSUE
+  CHECKLIST
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  SUPPRESSED
+}
+
+enum ApplicationStatus {
+  NEW
+  REVIEWING
+  INTERVIEW
+  HIRED
+  REJECTED
+}
+
+// ───────────────────────── Tenancy & geography ─────────────────────────
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  defaultCurrency String   @default("CAD")
+  stripeAccountId String?
+  settings        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  regions            Region[]
+  users              User[]
+  customers          Customer[]
+  cleaners           Cleaner[]
+  services           Service[]
+  extras             Extra[]
+  pricingTables      PricingTable[]
+  bookings           Booking[]
+  jobs               Job[]
+  charges            Charge[]
+  promoCodes         PromoCode[]
+  giftCards          GiftCard[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  checklistTemplates ChecklistTemplate[]
+  applications       CleanerApplication[]
+}
+
+model Region {
+  id             String       @id @default(cuid())
+  organizationId String
+  slug           String
+  name           String
+  province       Province
+  timezone       String
+  phone          String?
+  email          String?
+  addressLine    String?
+  lat            Float?
+  lng            Float?
+  status         RegionStatus @default(ACTIVE)
+  launchedAt     DateTime?
+
+  // policy knobs
+  minLeadHours             Int          @default(24)
+  maxAdvanceDays           Int          @default(60)
+  lateCancelWindowHours    Int          @default(24)
+  lateCancelFeeType        FeeType      @default(FIXED)
+  lateCancelFeeValue       Int          @default(5000)
+  requireCleanerAcceptance Boolean      @default(false)
+  capacityMode             CapacityMode @default(FIXED)
+
+  // SEO / marketing
+  seoTitle          String?
+  seoDescription    String?
+  landingContent    Json?
+  googleRating      Decimal? @db.Decimal(2, 1)
+  googleReviewCount Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization       Organization         @relation(fields: [organizationId], references: [id])
+  serviceAreas       ServiceArea[]
+  cities             City[]
+  windows            ArrivalWindow[]
+  capacities         WindowCapacity[]
+  blackouts          BlackoutDate[]
+  pricingTables      PricingTable[]
+  userRoles          UserRole[]
+  addresses          Address[]
+  cleanerRegions     CleanerRegion[]
+  homeCleaners       Cleaner[]            @relation("CleanerHomeRegion")
+  bookings           Booking[]
+  jobs               Job[]
+  priceQuotes        PriceQuote[]
+  checklistTemplates ChecklistTemplate[]
+  applications       CleanerApplication[]
+  auditLogs          AuditLog[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, status])
+}
+
+/// First three characters of a Canadian postal code (Forward Sortation Area). One FSA maps to one region.
+model ServiceArea {
+  id        String   @id @default(cuid())
+  regionId  String
+  fsa       String   @db.Char(3)
+  cityLabel String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  region Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([fsa])
+  @@index([regionId])
+}
+
+/// Marketing unit for SEO landing pages. Many cities can map to one operational region.
+model City {
+  id             String   @id @default(cuid())
+  regionId       String
+  name           String
+  slug           String   @unique
+  province       Province
+  seoTitle       String?
+  seoDescription String?
+  intro          String?
+  neighborhoods  String[] @default([])
+  faqs           Json?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  region Region @relation(fields: [regionId], references: [id])
+
+  @@index([regionId])
+}
+
+model TaxRate {
+  id            String    @id @default(cuid())
+  province      Province
+  name          String
+  rateBps       Int
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+
+  @@index([province, effectiveFrom])
+}
+
+model ArrivalWindow {
+  id         String  @id @default(cuid())
+  regionId   String
+  label      String
+  startLocal String
+  endLocal   String
+  sortOrder  Int     @default(0)
+  active     Boolean @default(true)
+
+  region     Region           @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  capacities WindowCapacity[]
+  blackouts  BlackoutDate[]
+  bookings   Booking[]
+
+  @@unique([regionId, startLocal])
+}
+
+/// Capacity per region + window, by weekday (recurring) or by exact date (override).
+model WindowCapacity {
+  id       String    @id @default(cuid())
+  regionId String
+  windowId String
+  weekday  Int?
+  date     DateTime? @db.Date
+  capacity Int
+
+  region Region        @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  window ArrivalWindow @relation(fields: [windowId], references: [id], onDelete: Cascade)
+
+  @@unique([regionId, windowId, weekday])
+  @@unique([regionId, windowId, date])
+}
+
+model BlackoutDate {
+  id       String   @id @default(cuid())
+  regionId String
+  date     DateTime @db.Date
+  windowId String?
+  reason   String?
+
+  region Region         @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  window ArrivalWindow? @relation(fields: [windowId], references: [id], onDelete: Cascade)
+
+  @@index([regionId, date])
+}
+
+// ───────────────────────── Catalog & pricing ─────────────────────────
+
+model Service {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  slug                String
+  name                String
+  description         String?
+  pricingModel        PricingModel @default(FLAT)
+  isUpgrade           Boolean      @default(false)
+  checklistTemplateId String?
+  sortOrder           Int          @default(0)
+  active              Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  checklistTemplate ChecklistTemplate? @relation(fields: [checklistTemplateId], references: [id])
+  bookings          Booking[]          @relation("BookingService")
+  upgradeBookings   Booking[]          @relation("BookingFirstCleanUpgrade")
+  jobs              Job[]
+
+  @@unique([organizationId, slug])
+}
+
+model Extra {
+  id             String    @id @default(cuid())
+  organizationId String
+  slug           String
+  name           String
+  description    String?
+  unit           ExtraUnit @default(FIXED)
+  maxQty         Int       @default(1)
+  defaultMinutes Int       @default(30)
+  sortOrder      Int       @default(0)
+  active         Boolean   @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, slug])
+}
+
+/// One rate sheet. regionId null = organization default. Published tables are immutable.
+model PricingTable {
+  id             String             @id @default(cuid())
+  organizationId String
+  regionId       String?
+  version        Int
+  status         PricingTableStatus @default(DRAFT)
+  effectiveFrom  DateTime
+  notes          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  region       Region?       @relation(fields: [regionId], references: [id])
+  rates        PricingRate[]
+  quotes       PriceQuote[]
+
+  @@unique([organizationId, regionId, version])
+  @@index([regionId, status, effectiveFrom])
+}
+
+model PricingRate {
+  id             String   @id @default(cuid())
+  pricingTableId String
+  kind           RateKind
+  key            String
+  amountCents    Int?
+  bps            Int?
+  minutes        Int?
+
+  table PricingTable @relation(fields: [pricingTableId], references: [id], onDelete: Cascade)
+
+  @@unique([pricingTableId, kind, key])
+}
+
+/// Append-only. The only permitted update is attaching jobId/bookingId.
+model PriceQuote {
+  id               String      @id @default(cuid())
+  jobId            String?     @unique
+  bookingId        String?
+  regionId         String
+  pricingTableId   String
+  engineVersion    String
+  inputs           Json
+  lines            Json
+  subtotalCents    Int
+  discountCents    Int
+  taxableCents     Int
+  taxCents         Int
+  totalCents       Int
+  estimatedMinutes Int
+  reason           QuoteReason @default(BOOKING)
+  createdByUserId  String?
+  createdAt        DateTime    @default(now())
+
+  region  Region       @relation(fields: [regionId], references: [id])
+  table   PricingTable @relation(fields: [pricingTableId], references: [id])
+  job     Job?         @relation("JobActiveQuote", fields: [jobId], references: [id])
+  booking Booking?     @relation(fields: [bookingId], references: [id])
+  charges Charge[]
+
+  @@index([bookingId, createdAt])
+}
+
+model PromoCode {
+  id               String       @id @default(cuid())
+  organizationId   String
+  code             String
+  type             DiscountType
+  value            Int
+  appliesTo        PromoScope   @default(FIRST_JOB)
+  minSubtotalCents Int          @default(0)
+  maxDiscountCents Int?
+  maxRedemptions   Int?
+  perCustomerLimit Int          @default(1)
+  newCustomersOnly Boolean      @default(false)
+  regionIds        String[]     @default([])
+  serviceIds       String[]     @default([])
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  bookings     Booking[]
+  redemptions  PromoRedemption[]
+
+  @@unique([organizationId, code])
+}
+
+model PromoRedemption {
+  id            String   @id @default(cuid())
+  promoCodeId   String
+  customerId    String
+  bookingId     String
+  jobId         String?
+  discountCents Int
+  createdAt     DateTime @default(now())
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id])
+  customer  Customer  @relation(fields: [customerId], references: [id])
+
+  @@unique([promoCodeId, jobId])
+  @@index([customerId])
+}
+
+model GiftCard {
+  id                  String         @id @default(cuid())
+  organizationId      String
+  code                String         @unique
+  initialCents        Int
+  balanceCents        Int
+  purchaserCustomerId String?
+  purchaserEmail      String
+  recipientEmail      String?
+  message             String?
+  purchaseChargeId    String?
+  status              GiftCardStatus @default(ACTIVE)
+  createdAt           DateTime       @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id])
+  bookings     Booking[]
+  redemptions  GiftCardRedemption[]
+}
+
+model GiftCardRedemption {
+  id          String    @id @default(cuid())
+  giftCardId  String
+  chargeId    String
+  amountCents Int
+  reversedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id])
+  charge   Charge   @relation(fields: [chargeId], references: [id])
+}
+
+// ───────────────────────── People & auth ─────────────────────────
+
+model User {
+  id              String     @id @default(cuid())
+  organizationId  String
+  email           String
+  emailVerified   DateTime?
+  name            String?
+  image           String?
+  phone           String?
+  phoneVerifiedAt DateTime?
+  passwordHash    String?
+  totpSecret      String?
+  totpEnabled     Boolean    @default(false)
+  status          UserStatus @default(ACTIVE)
+  sessionVersion  Int        @default(1)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  roles        UserRole[]
+  accounts     Account[]
+  sessions     Session[]
+  customer     Customer?
+  cleaner      Cleaner?
+
+  @@unique([organizationId, email])
+  @@index([email])
+}
+
+model UserRole {
+  id       String  @id @default(cuid())
+  userId   String
+  role     Role
+  regionId String?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region Region? @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role, regionId])
+  @@index([regionId])
+}
+
+// Auth.js adapter tables
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Customer {
+  id                     String    @id @default(cuid())
+  organizationId         String
+  userId                 String?   @unique
+  firstName              String
+  lastName               String
+  email                  String
+  phone                  String?
+  stripeCustomerId       String?   @unique
+  defaultPaymentMethodId String?
+  marketingOptIn         Boolean   @default(false)
+  smsOptOut              Boolean   @default(false)
+  source                 String?
+  notes                  String?
+  tags                   String[]  @default([])
+  anonymizedAt           DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  user             User?             @relation(fields: [userId], references: [id])
+  addresses        Address[]
+  paymentMethods   PaymentMethod[]
+  bookings         Booking[]
+  jobs             Job[]
+  charges          Charge[]
+  tips             Tip[]
+  reviews          Review[]
+  promoRedemptions PromoRedemption[]
+
+  @@unique([organizationId, email])
+}
+
+model Address {
+  id                  String    @id @default(cuid())
+  customerId          String
+  regionId            String
+  line1               String
+  line2               String?
+  city                String
+  province            Province
+  postalCode          String
+  fsa                 String    @db.Char(3)
+  lat                 Float?
+  lng                 Float?
+  placeId             String?
+  entryInstructions   String?
+  parkingInstructions String?
+  secureNotes         String?
+  pets                String?
+  isDefault           Boolean   @default(false)
+  archivedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  region   Region    @relation(fields: [regionId], references: [id])
+  bookings Booking[]
+  jobs     Job[]
+
+  @@index([customerId])
+}
+
+model PaymentMethod {
+  id                    String              @id @default(cuid())
+  customerId            String
+  stripePaymentMethodId String              @unique
+  brand                 String
+  last4                 String
+  expMonth              Int
+  expYear               Int
+  status                PaymentMethodStatus @default(ACTIVE)
+  createdAt             DateTime            @default(now())
+
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+  charges  Charge[]
+
+  @@index([customerId])
+}
+
+model Cleaner {
+  id                     String        @id @default(cuid())
+  organizationId         String
+  userId                 String?       @unique
+  firstName              String
+  lastName               String
+  email                  String
+  phone                  String
+  photoUrl               String?
+  status                 CleanerStatus @default(ONBOARDING)
+  backgroundCheckStatus  BgCheckStatus @default(PENDING)
+  backgroundCheckAt      DateTime?
+  homeRegionId           String
+  payType                PayType       @default(PERCENT_OF_JOB)
+  payRateCents           Int?
+  payPercentBps          Int?
+  maxJobsPerDay          Int           @default(3)
+  ratingAvg              Decimal?      @db.Decimal(3, 2)
+  ratingCount            Int           @default(0)
+  stripeConnectAccountId String?
+  notes                  String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id])
+  user         User?                 @relation(fields: [userId], references: [id])
+  homeRegion   Region                @relation("CleanerHomeRegion", fields: [homeRegionId], references: [id])
+  regions      CleanerRegion[]
+  skills       CleanerSkill[]
+  availability CleanerAvailability[]
+  timeOff      TimeOff[]
+  assignments  Assignment[]
+  earnings     CleanerEarning[]
+  payouts      Payout[]
+  photos       JobPhoto[]
+  tipSplits    TipSplit[]
+  reviews      Review[]
+  preferredBy  Booking[]             @relation("BookingPreferredCleaner")
+
+  @@unique([organizationId, email])
+  @@index([homeRegionId, status])
+}
+
+model CleanerRegion {
+  cleanerId String
+  regionId  String
+
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  region  Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@id([cleanerId, regionId])
+}
+
+model CleanerSkill {
+  cleanerId String
+  skill     Skill
+
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+
+  @@id([cleanerId, skill])
+}
+
+/// Weekly recurring availability, local time in the cleaner's home region timezone.
+model CleanerAvailability {
+  id            String    @id @default(cuid())
+  cleanerId     String
+  weekday       Int
+  startLocal    String
+  endLocal      String
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+
+  @@index([cleanerId, weekday])
+}
+
+model TimeOff {
+  id        String        @id @default(cuid())
+  cleanerId String
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+  status    TimeOffStatus @default(REQUESTED)
+  createdAt DateTime      @default(now())
+
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+
+  @@index([cleanerId, startsAt])
+}
+
+// ───────────────────────── Booking & jobs ─────────────────────────
+
+/// The arrangement / series. A one-time booking is a series with exactly one Job.
+model Booking {
+  id              String        @id @default(cuid())
+  organizationId  String
+  regionId        String
+  customerId      String
+  addressId       String
+  serviceId       String
+  paymentMethodId String?
+  bookingNumber   String        @unique
+  source          BookingSource @default(WEB)
+  status          BookingStatus @default(ACTIVE)
+
+  // recurrence
+  frequency        Frequency
+  anchorDate       DateTime  @db.Date
+  weekday          Int
+  windowId         String
+  endsOn           DateTime? @db.Date
+  pausedFrom       DateTime? @db.Date
+  pausedUntil      DateTime? @db.Date
+  generatedThrough DateTime? @db.Date
+
+  // service template copied into each Job
+  bedrooms                   Int
+  bathrooms                  Decimal   @db.Decimal(3, 1)
+  sqft                       Int?
+  hourlyHours                Decimal?  @db.Decimal(4, 1)
+  hourlyCleaners             Int?
+  extras                     Json      @default("[]")
+  firstCleanUpgradeServiceId String?
+  defaultTipCents            Int       @default(0)
+  customerNotes              String?
+  internalNotes              String?
+  promoCodeId                String?
+  giftCardId                 String?
+  preferredCleanerId         String?
+  marketingConsentAt         DateTime?
+
+  cancellationReason String?
+  cancelledAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  organization      Organization   @relation(fields: [organizationId], references: [id])
+  region            Region         @relation(fields: [regionId], references: [id])
+  customer          Customer       @relation(fields: [customerId], references: [id])
+  address           Address        @relation(fields: [addressId], references: [id])
+  service           Service        @relation("BookingService", fields: [serviceId], references: [id])
+  firstCleanUpgrade Service?       @relation("BookingFirstCleanUpgrade", fields: [firstCleanUpgradeServiceId], references: [id])
+  paymentMethod     PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  window            ArrivalWindow  @relation(fields: [windowId], references: [id])
+  promoCode         PromoCode?     @relation(fields: [promoCodeId], references: [id])
+  giftCard          GiftCard?      @relation(fields: [giftCardId], references: [id])
+  preferredCleaner  Cleaner?       @relation("BookingPreferredCleaner", fields: [preferredCleanerId], references: [id])
+  jobs              Job[]
+  quotes            PriceQuote[]
+
+  @@index([customerId])
+  @@index([regionId, status])
+  @@index([status, generatedThrough])
+}
+
+/// One visit. A denormalized snapshot of the booking at generation time.
+model Job {
+  id             String    @id @default(cuid())
+  organizationId String
+  regionId       String
+  bookingId      String
+  customerId     String
+  sequenceNumber Int
+  detached       Boolean   @default(false)
+  status         JobStatus @default(CONFIRMED)
+
+  // schedule (local truth + derived UTC)
+  scheduledDate    DateTime @db.Date
+  windowStartLocal String
+  windowEndLocal   String
+  timezone         String
+  scheduledStartAt DateTime
+  scheduledEndAt   DateTime
+  estimatedMinutes Int
+
+  // snapshot
+  serviceId           String
+  addressId           String
+  addressSnapshot     Json
+  bedrooms            Int
+  bathrooms           Decimal  @db.Decimal(3, 1)
+  sqft                Int?
+  hourlyHours         Decimal? @db.Decimal(4, 1)
+  hourlyCleaners      Int?
+  extras              Json     @default("[]")
+  isFirstCleanUpgrade Boolean  @default(false)
+  customerNotes       String?
+  internalNotes       String?
+
+  // pricing
+  activeQuoteId String?          @unique
+  priceLockedAt DateTime?
+  paymentStatus JobPaymentStatus @default(UNPAID)
+  tipCents      Int              @default(0)
+
+  // execution
+  cancelledAt        DateTime?
+  cancelledBy        ActorType?
+  cancellationType   CancellationType?
+  cancellationReason String?
+  actualStartAt      DateTime?
+  actualEndAt        DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  organization  Organization       @relation(fields: [organizationId], references: [id])
+  region        Region             @relation(fields: [regionId], references: [id])
+  booking       Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer      Customer           @relation(fields: [customerId], references: [id])
+  service       Service            @relation(fields: [serviceId], references: [id])
+  address       Address            @relation(fields: [addressId], references: [id])
+  activeQuote   PriceQuote?        @relation("JobActiveQuote")
+  assignments   Assignment[]
+  charges       Charge[]
+  tips          Tip[]
+  checklist     JobChecklistItem[]
+  photos        JobPhoto[]
+  events        JobEvent[]
+  review        Review?
+  earnings      CleanerEarning[]
+  notifications Notification[]
+
+  @@unique([bookingId, sequenceNumber])
+  @@index([regionId, scheduledDate, status])
+  @@index([regionId, scheduledDate, windowStartLocal])
+  @@index([customerId, scheduledStartAt])
+  @@index([status, scheduledStartAt])
+}
+
+model Assignment {
+  id               String           @id @default(cuid())
+  jobId            String
+  cleanerId        String
+  role             AssignmentRole   @default(LEAD)
+  status           AssignmentStatus @default(OFFERED)
+  offeredAt        DateTime         @default(now())
+  respondedAt      DateTime?
+  assignedByUserId String?
+  removedReason    String?
+  checkInAt        DateTime?
+  checkInLat       Float?
+  checkInLng       Float?
+  checkOutAt       DateTime?
+  checkOutLat      Float?
+  checkOutLng      Float?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  job     Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cleaner Cleaner         @relation(fields: [cleanerId], references: [id])
+  earning CleanerEarning?
+
+  @@unique([jobId, cleanerId])
+  @@index([cleanerId, status])
+}
+
+/// Append-only job timeline.
+model JobEvent {
+  id        String       @id @default(cuid())
+  jobId     String
+  type      JobEventType
+  actorType ActorType
+  actorId   String?
+  data      Json         @default("{}")
+  createdAt DateTime     @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
+model ChecklistTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  regionId       String?
+  name           String
+  createdAt      DateTime @default(now())
+
+  organization Organization            @relation(fields: [organizationId], references: [id])
+  region       Region?                 @relation(fields: [regionId], references: [id])
+  items        ChecklistTemplateItem[]
+  services     Service[]
+}
+
+model ChecklistTemplateItem {
+  id            String  @id @default(cuid())
+  templateId    String
+  section       String
+  label         String
+  sortOrder     Int     @default(0)
+  requiresPhoto Boolean @default(false)
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model JobChecklistItem {
+  id                   String    @id @default(cuid())
+  jobId                String
+  section              String
+  label                String
+  sortOrder            Int       @default(0)
+  requiresPhoto        Boolean   @default(false)
+  completedAt          DateTime?
+  completedByCleanerId String?
+  photoId              String?
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model JobPhoto {
+  id         String    @id @default(cuid())
+  jobId      String
+  cleanerId  String
+  kind       PhotoKind
+  storageKey String
+  url        String
+  takenAt    DateTime  @default(now())
+  lat        Float?
+  lng        Float?
+
+  job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id])
+
+  @@index([jobId])
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  jobId         String   @unique
+  customerId    String
+  cleanerId     String?
+  rating        Int
+  comment       String?
+  isPublic      Boolean  @default(false)
+  adminResponse String?
+  createdAt     DateTime @default(now())
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id])
+  cleaner  Cleaner? @relation(fields: [cleanerId], references: [id])
+
+  @@index([cleanerId, isPublic])
+}
+
+// ───────────────────────── Money ─────────────────────────
+
+model Charge {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  customerId            String
+  jobId                 String?
+  type                  ChargeType
+  quoteId               String?
+  amountCents           Int
+  giftCardCents         Int          @default(0)
+  cardCents             Int
+  currency              String       @default("CAD")
+  status                ChargeStatus @default(PENDING)
+  paymentMethodId       String?
+  stripePaymentIntentId String?      @unique
+  stripeChargeId        String?
+  failureCode           String?
+  failureMessage        String?
+  attemptCount          Int          @default(0)
+  nextRetryAt           DateTime?
+  capturedAt            DateTime?
+  idempotencyKey        String       @unique
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  customer            Customer             @relation(fields: [customerId], references: [id])
+  job                 Job?                 @relation(fields: [jobId], references: [id])
+  quote               PriceQuote?          @relation(fields: [quoteId], references: [id])
+  paymentMethod       PaymentMethod?       @relation(fields: [paymentMethodId], references: [id])
+  refunds             Refund[]
+  tips                Tip[]
+  giftCardRedemptions GiftCardRedemption[]
+
+  @@index([jobId, type])
+  @@index([status, nextRetryAt])
+}
+
+model Refund {
+  id              String       @id @default(cuid())
+  chargeId        String
+  amountCents     Int
+  toGiftCardCents Int          @default(0)
+  reason          RefundReason
+  note            String?
+  stripeRefundId  String?      @unique
+  status          RefundStatus @default(PENDING)
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+
+  charge Charge @relation(fields: [chargeId], references: [id])
+}
+
+model Tip {
+  id          String   @id @default(cuid())
+  jobId       String
+  customerId  String
+  amountCents Int
+  chargeId    String?
+  createdAt   DateTime @default(now())
+
+  job      Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customer Customer   @relation(fields: [customerId], references: [id])
+  charge   Charge?    @relation(fields: [chargeId], references: [id])
+  splits   TipSplit[]
+}
+
+model TipSplit {
+  tipId       String
+  cleanerId   String
+  amountCents Int
+
+  tip     Tip     @relation(fields: [tipId], references: [id], onDelete: Cascade)
+  cleaner Cleaner @relation(fields: [cleanerId], references: [id])
+
+  @@id([tipId, cleanerId])
+}
+
+model CleanerEarning {
+  id              String        @id @default(cuid())
+  assignmentId    String        @unique
+  cleanerId       String
+  jobId           String
+  basis           PayType
+  baseCents       Int
+  tipCents        Int           @default(0)
+  adjustmentCents Int           @default(0)
+  totalCents      Int
+  status          EarningStatus @default(PENDING)
+  payoutId        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  cleaner    Cleaner    @relation(fields: [cleanerId], references: [id])
+  job        Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  payout     Payout?    @relation(fields: [payoutId], references: [id])
+
+  @@index([cleanerId, status])
+}
+
+model Payout {
+  id               String       @id @default(cuid())
+  cleanerId        String
+  periodStart      DateTime     @db.Date
+  periodEnd        DateTime     @db.Date
+  totalCents       Int
+  method           PayoutMethod @default(MANUAL)
+  stripeTransferId String?
+  status           PayoutStatus @default(PENDING)
+  paidAt           DateTime?
+  createdAt        DateTime     @default(now())
+
+  cleaner  Cleaner          @relation(fields: [cleanerId], references: [id])
+  earnings CleanerEarning[]
+
+  @@index([cleanerId, periodStart])
+}
+
+/// Webhook idempotency. id = Stripe event id.
+model StripeEvent {
+  id          String    @id
+  type        String
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+}
+
+// ───────────────────────── Comms & audit ─────────────────────────
+
+model Notification {
+  id                String             @id @default(cuid())
+  organizationId    String
+  channel           Channel
+  templateKey       String
+  recipientType     ActorType
+  recipientId       String?
+  to                String
+  jobId             String?
+  bookingId         String?
+  payload           Json               @default("{}")
+  status            NotificationStatus @default(QUEUED)
+  providerMessageId String?
+  dedupeKey         String?            @unique
+  sentAt            DateTime?
+  error             String?
+  createdAt         DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  job          Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([recipientType, recipientId, createdAt])
+}
+
+model AuditLog {
+  id             String    @id @default(cuid())
+  organizationId String
+  regionId       String?
+  actorType      ActorType
+  actorId        String?
+  entityType     String
+  entityId       String
+  action         String
+  before         Json?
+  after          Json?
+  requestId      String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  region       Region?      @relation(fields: [regionId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model CleanerApplication {
+  id             String            @id @default(cuid())
+  organizationId String
+  regionId       String?
+  firstName      String
+  lastName       String
+  email          String
+  phone          String
+  city           String?
+  experience     String?
+  hasVehicle     Boolean?
+  status         ApplicationStatus @default(NEW)
+  notes          String?
+  createdAt      DateTime          @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  region       Region?      @relation(fields: [regionId], references: [id])
+
+  @@index([regionId, status])
+}
+
+/// Out-of-area interest captured from the booking form.
+model ServiceAreaRequest {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  postalCode     String
+  fsa            String   @db.Char(3)
+  createdAt      DateTime @default(now())
+
+  @@index([fsa])
+}
+
+/// Fixed-window rate limiting without an external store. Rows are pruned by the retention task.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}

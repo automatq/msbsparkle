@@ -1,0 +1,10 @@
+allowBuilds:
+  sharp: true
+  unrs-resolver: false
+  esbuild: true
+  workerd: false
+  prisma: true
+  "@prisma/engines": true
+  "@prisma/client": true
+  "@node-rs/argon2": true
+  protobufjs: false
