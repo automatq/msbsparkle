@@ -1,3 +1,4 @@
+import { AutoAssignButton } from "@/components/admin/ui";
 import Link from "next/link";
 import { DispatchCalendar } from "@/components/admin/dispatch-calendar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -64,6 +65,9 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
               Switch
             </Button>
           </form>
+          {unassigned ? (
+            <AutoAssignButton regionId={region.id} date={date} count={unassigned} />
+          ) : null}
           <Link
             href={href(addLocalDays(date, -1))}
             className={buttonVariants({ variant: "outline", size: "sm" })}

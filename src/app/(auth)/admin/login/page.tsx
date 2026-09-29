@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "@/modules/auth/config";
+import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
   const params = await searchParams;
@@ -12,6 +13,14 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
 
   async function login(formData: FormData) {
     "use server";
+    const emailKey = String(formData.get("email") ?? "")
+      .trim()
+      .toLowerCase();
+    const [byEmail, byIp] = await Promise.all([
+      rateLimit("admin-login:email", emailKey, 10, 15 * 60),
+      rateLimit("admin-login:ip", await clientIp(), 50, 60 * 60),
+    ]);
+    if (!byEmail.allowed || !byIp.allowed) redirect(`/admin/login?error=RateLimited`);
     try {
       await signIn("admin-credentials", {
         email: String(formData.get("email") ?? "")
@@ -33,7 +42,13 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
         <h1 className="text-xl font-semibold">Admin sign in</h1>
         <p className="text-sm text-muted-foreground">Staff and dispatch access.</p>
       </div>
-      {error ? <p className="text-sm text-destructive">Invalid email, password or code.</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive">
+          {error === "RateLimited"
+            ? "Too many attempts. Try again in a few minutes."
+            : "Invalid email, password or code."}
+        </p>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" required autoComplete="username" />

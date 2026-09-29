@@ -16,6 +16,7 @@ const NAV = [
   ["/admin/promos", "Promos"],
   ["/admin/applications", "Applicants"],
   ["/admin/reports", "Reports"],
+  ["/admin/settings/security", "Security"],
 ] as const;
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {

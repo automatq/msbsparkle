@@ -10,8 +10,10 @@ import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
 import { emit } from "@/modules/jobs/client";
 import { createEarningForAssignment } from "@/modules/cleaner/earnings";
+import { anonymizeCustomer } from "@/modules/jobs/tasks/retention";
 import { createServiceCharge, refundCharge, waiveJobPayment } from "@/modules/payments/charges";
 import { assignCleaner, rescheduleJob, unassignCleaner } from "@/modules/scheduling/assignment";
+import { autoAssignDay } from "@/modules/scheduling/dispatch";
 import { loadAvailability } from "@/modules/scheduling/availability";
 import { localDateToDateColumn, zonedToInstant } from "@/modules/shared/dates";
 
@@ -38,6 +40,20 @@ function revalidateJob(jobId: string) {
 }
 
 // ── Jobs & dispatch ────────────────────────────────────────────────────────
+
+export async function autoAssignDayAction(regionId: string, date: string): Promise<ActionResult> {
+  try {
+    const ctx = await adminCtx();
+    assertRegionAccess(ctx, regionId);
+    const res = await autoAssignDay(regionId, date, actorOf(ctx));
+    revalidatePath("/admin/calendar");
+    revalidatePath("/admin/jobs");
+    const msg = `Assigned ${res.assigned.length} job${res.assigned.length === 1 ? "" : "s"}${res.skipped.length ? `, ${res.skipped.length} left unassigned` : ""}.`;
+    return { ok: true, message: msg, warnings: res.skipped.slice(0, 5).map((s) => s.reason) };
+  } catch (e) {
+    return fail(e);
+  }
+}
 
 export async function assignAction(
   jobId: string,
@@ -422,6 +438,29 @@ export async function saveCleanerAction(
 
 // ── Customers ──────────────────────────────────────────────────────────────
 
+export async function anonymizeCustomerAction(customerId: string): Promise<ActionResult> {
+  try {
+    const ctx = await getCtx("SUPER_ADMIN");
+    const open = await prisma.job.count({
+      where: {
+        customerId,
+        status: { in: ["PENDING", "CONFIRMED", "ASSIGNED", "EN_ROUTE", "IN_PROGRESS"] },
+      },
+    });
+    if (open)
+      return {
+        ok: false,
+        message: `Cancel the customer's ${open} open visit${open > 1 ? "s" : ""} first.`,
+      };
+    await anonymizeCustomer(customerId, actorOf(ctx));
+    revalidatePath(`/admin/customers/${customerId}`);
+    revalidatePath("/admin/customers");
+    return { ok: true, message: "Personal data removed. Financial records kept." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function updateCustomerNotesAction(
   customerId: string,
   notes: string,
@@ -452,6 +491,7 @@ const regionSchema = z.object({
   lateCancelFeeType: z.enum(["FIXED", "PERCENT"]),
   lateCancelFeeValue: z.number().int().min(0),
   requireCleanerAcceptance: z.boolean(),
+  capacityMode: z.enum(["FIXED", "DERIVED"]).default("FIXED"),
 });
 export type RegionInput = z.infer<typeof regionSchema>;
 

@@ -2,6 +2,7 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/modules/db/client";
 import { sendEmail } from "@/modules/notifications/email";
 import { isTwilioConfigured, normalizePhone, sendSms } from "@/modules/notifications/sms";
+import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ACTIVE_CODES = 3;
@@ -22,6 +23,12 @@ export type OtpRequestResult =
 export async function requestOtp(phoneInput: string): Promise<OtpRequestResult> {
   const phone = normalizePhone(phoneInput);
   if (!phone) return { ok: false, message: "Enter a valid mobile number." };
+  const [byPhone, byIp] = await Promise.all([
+    rateLimit("otp:phone", phone, 5, 15 * 60),
+    rateLimit("otp:ip", await clientIp(), 20, 60 * 60),
+  ]);
+  if (!byPhone.allowed || !byIp.allowed)
+    return { ok: false, message: "Too many codes requested. Try again in a few minutes." };
   const cleaner = await prisma.cleaner.findFirst({
     where: {
       phone: { in: [phone, phone.replace("+1", ""), phoneInput.trim()] },

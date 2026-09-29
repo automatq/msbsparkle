@@ -8,6 +8,7 @@ import {
   sendReviewRequest,
 } from "./tasks/notify";
 import { runReminders } from "./tasks/reminders";
+import { runRetention } from "./tasks/retention";
 import { runSeriesMaterialization } from "./tasks/series";
 
 const grace = () => `${Number(process.env.CHARGE_GRACE_MINUTES ?? 120)}m`;
@@ -61,6 +62,11 @@ export const adminDigest = inngest.createFunction(
   async ({ step }) => step.run("digest", () => runAdminDigest()),
 );
 
+export const retention = inngest.createFunction(
+  { id: "retention", triggers: [{ cron: "30 4 * * *" }] },
+  async ({ step }) => step.run("purge", () => runRetention()),
+);
+
 export const functions = [
   onBookingConfirmed,
   onJobAssigned,
@@ -70,4 +76,5 @@ export const functions = [
   paymentRetries,
   materializeSeries,
   adminDigest,
+  retention,
 ];

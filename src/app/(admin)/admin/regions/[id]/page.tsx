@@ -80,6 +80,7 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
                 lateCancelFeeType: r.lateCancelFeeType,
                 lateCancelFeeValue: r.lateCancelFeeValue,
                 requireCleanerAcceptance: r.requireCleanerAcceptance,
+                capacityMode: r.capacityMode,
               }}
             />
           </CardContent>

@@ -7,6 +7,7 @@ import {
   PaymentPanel,
   ReschedulePanel,
   StatusPanel,
+  SuggestPanel,
   UnassignButton,
 } from "@/components/admin/job-panels";
 import { StatusBadge } from "@/components/admin/ui";
@@ -15,6 +16,7 @@ import { assertRegionAccess, requireRole } from "@/modules/auth/session";
 import { isLateCancel, lateCancelFeeCents } from "@/modules/bookings/cancel";
 import { prisma } from "@/modules/db/client";
 import { isStripeConfigured } from "@/modules/payments/stripe";
+import { suggestCleaners } from "@/modules/scheduling/dispatch";
 import type { QuoteLine } from "@/modules/pricing/types";
 import { dateColumnToLocalDate, formatInZone } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
@@ -50,6 +52,9 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
     },
     orderBy: { firstName: "asc" },
   });
+  const suggestions = ["COMPLETED", "CANCELLED", "SKIPPED", "NO_SHOW"].includes(job.status)
+    ? []
+    : await suggestCleaners(job.id);
   const active = job.assignments.filter((a) => ["ACCEPTED", "OFFERED"].includes(a.status));
   const addr = job.addressSnapshot as {
     line1: string;
@@ -137,6 +142,7 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                   {open ? <UnassignButton jobId={job.id} cleanerId={a.cleanerId} /> : null}
                 </div>
               ))}
+              {open ? <SuggestPanel jobId={job.id} suggestions={suggestions} /> : null}
               {open ? (
                 <AssignPanel
                   jobId={job.id}

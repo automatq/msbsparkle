@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { ActionResult } from "@/modules/admin/actions";
+import { autoAssignDayAction, type ActionResult } from "@/modules/admin/actions";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-900",
@@ -86,5 +86,26 @@ export function ActionButton({
     >
       {pending ? "…" : children}
     </Button>
+  );
+}
+
+export function AutoAssignButton({
+  regionId,
+  date,
+  count,
+}: {
+  regionId: string;
+  date: string;
+  count: number;
+}) {
+  return (
+    <ActionButton
+      action={() => autoAssignDayAction(regionId, date)}
+      variant="default"
+      size="sm"
+      confirm={`Auto-assign ${count} unassigned job${count === 1 ? "" : "s"} using availability, history and ratings?`}
+    >
+      Auto-assign {count}
+    </ActionButton>
   );
 }

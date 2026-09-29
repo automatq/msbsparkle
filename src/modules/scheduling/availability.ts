@@ -122,6 +122,13 @@ export async function loadAvailability(
     else if (c.weekday !== null) byWeekday.set(`${c.weekday}|${c.windowId}`, c.capacity);
   }
 
+  const fixed = (date: LocalDate, windowId: string) =>
+    byDate.get(`${date}|${windowId}`) ?? byWeekday.get(`${weekdayOf(date)}|${windowId}`) ?? 0;
+  const derived =
+    region.capacityMode === "DERIVED"
+      ? await derivedCapacity(regionId, region.windows, fromDate, toDate)
+      : null;
+
   return computeAvailability({
     timezone: region.timezone,
     minLeadHours: region.minLeadHours,
@@ -130,12 +137,62 @@ export async function loadAvailability(
     fromDate,
     toDate,
     now,
+    // DERIVED: cleaners whose weekly availability covers the window and who are not on time off.
+    // A date-specific FIXED override still wins so dispatch can cap or boost a single day.
     capacityFor: (date, windowId) =>
-      byDate.get(`${date}|${windowId}`) ?? byWeekday.get(`${weekdayOf(date)}|${windowId}`) ?? 0,
+      derived
+        ? (byDate.get(`${date}|${windowId}`) ?? derived(date, windowId))
+        : fixed(date, windowId),
     blackouts: region.blackouts.map((b) => ({
       date: dateColumnToLocalDate(b.date),
       windowId: b.windowId,
     })),
     booked,
   });
+}
+
+const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+
+/** Capacity from cleaner schedules: count of active cleaners serving the region available for the window. */
+async function derivedCapacity(
+  regionId: string,
+  windows: WindowInfo[],
+  fromDate: LocalDate,
+  toDate: LocalDate,
+) {
+  const cleaners = await prisma.cleaner.findMany({
+    where: {
+      status: "ACTIVE",
+      OR: [{ homeRegionId: regionId }, { regions: { some: { regionId } } }],
+    },
+    include: {
+      availability: true,
+      timeOff: {
+        where: {
+          status: "APPROVED",
+          endsAt: { gte: localDateToDateColumn(fromDate) },
+          startsAt: { lte: localDateToDateColumn(addLocalDays(toDate, 1)) },
+        },
+      },
+    },
+  });
+  return (date: LocalDate, windowId: string) => {
+    const w = windows.find((x) => x.id === windowId);
+    if (!w) return 0;
+    const wd = weekdayOf(date);
+    const dayStart = localDateToDateColumn(date).getTime();
+    const dayEnd = dayStart + 86_400_000;
+    return cleaners.filter((c) => {
+      const off = c.timeOff.some(
+        (t) => t.startsAt.getTime() < dayEnd && t.endsAt.getTime() > dayStart,
+      );
+      if (off) return false;
+      return c.availability.some(
+        (a) =>
+          a.weekday === wd &&
+          toMin(a.startLocal) <= toMin(w.startLocal) &&
+          toMin(a.endLocal) >= toMin(w.endLocal),
+      );
+    }).length;
+  };
 }

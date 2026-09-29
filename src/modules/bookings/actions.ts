@@ -15,6 +15,7 @@ import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/mo
 import { hasRole } from "@/modules/auth/roles";
 import { getOptionalCtx } from "@/modules/auth/session";
 import { emit } from "@/modules/jobs/client";
+import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 import { createBooking } from "./create-booking";
 import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
 
@@ -56,6 +57,15 @@ export async function lookupPostalAction(postalInput: string): Promise<RegionLoo
 }
 
 export async function quoteAction(raw: QuoteRequest) {
+  const rl = await rateLimit("quote", await clientIp(), 60, 60);
+  if (!rl.allowed)
+    return {
+      ok: false as const,
+      error: {
+        code: "RATE_LIMITED" as const,
+        message: `Too many requests. Try again in ${rl.retryAfterSeconds}s.`,
+      },
+    };
   const parsed = quoteRequestSchema.safeParse(raw);
   if (!parsed.success)
     return {

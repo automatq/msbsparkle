@@ -310,3 +310,51 @@ export function UnassignButton({ jobId, cleanerId }: { jobId: string; cleanerId:
     </ActionButton>
   );
 }
+
+export function SuggestPanel({
+  jobId,
+  suggestions,
+}: {
+  jobId: string;
+  suggestions: {
+    id: string;
+    firstName: string;
+    score: number;
+    eligible: boolean;
+    reasons: string[];
+    warnings: string[];
+  }[];
+}) {
+  if (!suggestions.length) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground">Suggested</p>
+      <ul className="space-y-1">
+        {suggestions.slice(0, 5).map((s) => (
+          <li
+            key={s.id}
+            className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2 text-xs ${s.eligible ? "" : "opacity-60"}`}
+            data-testid={`suggest-${s.id}`}
+          >
+            <span>
+              <span className="font-medium">{s.firstName}</span>
+              {s.reasons.length ? (
+                <span className="ml-2 text-emerald-700">{s.reasons.join(" · ")}</span>
+              ) : null}
+              {s.warnings.length ? (
+                <span className="ml-2 text-amber-700">{s.warnings.join(" · ")}</span>
+              ) : null}
+            </span>
+            <ActionButton
+              action={() => assignAction(jobId, s.id, !s.eligible)}
+              size="xs"
+              variant={s.eligible ? "default" : "outline"}
+            >
+              {s.eligible ? "Assign" : "Force"}
+            </ActionButton>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

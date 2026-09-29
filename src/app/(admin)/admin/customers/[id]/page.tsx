@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CustomerNotes } from "@/components/admin/customer-panels";
+import { AnonymizeButton, CustomerNotes } from "@/components/admin/customer-panels";
 import { StatusBadge } from "@/components/admin/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -189,6 +189,20 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
             </CardHeader>
             <CardContent>
               <CustomerNotes customerId={c.id} notes={c.notes ?? ""} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Privacy</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ctx.isSuperAdmin ? (
+                <AnonymizeButton customerId={c.id} anonymized={!!c.anonymizedAt} />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Super admins can delete personal data on request.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -1387,3 +1387,11 @@ model ServiceAreaRequest {
 
   @@index([fsa])
 }
+
+/// Fixed-window rate limiting without an external store. Rows are pruned by the retention task.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}

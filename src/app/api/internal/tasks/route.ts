@@ -7,6 +7,7 @@ import { runAdminDigest } from "@/modules/jobs/tasks/digest";
 import { sendReviewRequest } from "@/modules/jobs/tasks/notify";
 import { runReminders } from "@/modules/jobs/tasks/reminders";
 import { runSeriesMaterialization } from "@/modules/jobs/tasks/series";
+import { runRetention } from "@/modules/jobs/tasks/retention";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json(await runSeriesMaterialization(now));
     case "retries":
       return NextResponse.json(await runPaymentRetries(now));
+    case "retention":
+      return NextResponse.json(await runRetention(now));
     case "digest":
       return NextResponse.json(await runAdminDigest(now));
     case "charge":
@@ -53,7 +56,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "unknown task",
-          tasks: ["reminders", "cutoff", "series", "retries", "digest", "charge", "review"],
+          tasks: [
+            "reminders",
+            "cutoff",
+            "series",
+            "retries",
+            "digest",
+            "retention",
+            "charge",
+            "review",
+          ],
         },
         { status: 400 },
       );
