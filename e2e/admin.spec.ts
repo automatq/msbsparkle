@@ -70,7 +70,7 @@ test.describe("admin dispatch", () => {
     await page.locator("table tbody tr td a").first().click();
     await page.getByRole("combobox").first().selectOption({ label: "Amara Okafor" });
     await page.getByLabel("Ignore conflicts").check(); // other specs may have booked the same window
-    await page.getByRole("button", { name: "Assign", exact: true }).click();
+    await page.getByTestId("assign-manual").click();
     await expect(page.getByText("Done").first()).toBeVisible();
     await expect(page.locator("main").getByText("ASSIGNED", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Amara Okafor" })).toBeVisible();

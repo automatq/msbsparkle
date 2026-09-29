@@ -74,7 +74,7 @@ test("cleaner: OTP login, accept assignment, check in, checklist, photo, check o
   const jobUrl = ap.url();
   await ap.getByRole("combobox").first().selectOption({ label: "Amara Okafor" });
   await ap.getByLabel("Ignore conflicts").check(); // earlier runs may have booked the same window
-  await ap.getByRole("button", { name: "Assign", exact: true }).click();
+  await ap.getByTestId("assign-manual").click();
   await expect(ap.getByText("Done")).toBeVisible();
 
   // 2. Cleaner signs in with a mobile code (delivered by email in dev).

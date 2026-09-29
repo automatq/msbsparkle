@@ -53,6 +53,7 @@ export function ActionButton({
   confirm,
   className,
   onDone,
+  testId,
 }: {
   action: () => Promise<ActionResult>;
   children: ReactNode;
@@ -61,6 +62,7 @@ export function ActionButton({
   confirm?: string;
   className?: string;
   onDone?: () => void;
+  testId?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -70,6 +72,7 @@ export function ActionButton({
       variant={variant}
       size={size}
       className={className}
+      data-testid={testId}
       disabled={pending}
       onClick={() => {
         if (confirm && !window.confirm(confirm)) return;

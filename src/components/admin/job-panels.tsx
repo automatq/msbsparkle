@@ -53,7 +53,11 @@ export function AssignPanel({
         <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />{" "}
         Ignore conflicts
       </label>
-      <ActionButton action={() => assignAction(jobId, cleanerId, force)} variant="default">
+      <ActionButton
+        action={() => assignAction(jobId, cleanerId, force)}
+        variant="default"
+        testId="assign-manual"
+      >
         Assign
       </ActionButton>
     </div>

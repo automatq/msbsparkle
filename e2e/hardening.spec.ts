@@ -135,7 +135,7 @@ test("quote API is rate limited per client", async ({ request }) => {
   };
   const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
   let limited = false;
-  for (let i = 0; i < 65; i++) {
+  for (let i = 0; i < 130; i++) {
     const res = await request.post("/api/quote", {
       data: body,
       headers: { "x-forwarded-for": ip },

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "@/modules/auth/config";
-import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
+import { clientIp, rateLimit, recordFailure } from "@/modules/shared/rate-limit";
 
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
   const params = await searchParams;
@@ -16,9 +16,11 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
     const emailKey = String(formData.get("email") ?? "")
       .trim()
       .toLowerCase();
+    // Only failed attempts count, so a busy dispatcher is never locked out by successful logins.
+    const ip = await clientIp();
     const [byEmail, byIp] = await Promise.all([
-      rateLimit("admin-login:email", emailKey, 10, 15 * 60),
-      rateLimit("admin-login:ip", await clientIp(), 50, 60 * 60),
+      rateLimit("admin-login:email", emailKey, 10, 15 * 60, new Date(), { consume: false }),
+      rateLimit("admin-login:ip", ip, 50, 60 * 60, new Date(), { consume: false }),
     ]);
     if (!byEmail.allowed || !byIp.allowed) redirect(`/admin/login?error=RateLimited`);
     try {
@@ -31,7 +33,11 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
         redirectTo: callbackUrl,
       });
     } catch (e) {
-      if (e instanceof AuthError) redirect(`/admin/login?error=CredentialsSignin`);
+      if (e instanceof AuthError) {
+        await recordFailure("admin-login:email", emailKey, 15 * 60);
+        await recordFailure("admin-login:ip", ip, 60 * 60);
+        redirect(`/admin/login?error=CredentialsSignin`);
+      }
       throw e;
     }
   }

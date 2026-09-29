@@ -43,7 +43,7 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 
 - **Smart dispatch**: each job page ranks cleaners (preferred, history with the customer, availability, skills, conflicts, rating, daily load) with one-click assign; the dispatch board offers "Auto-assign" for a region day. Regions can switch capacity to `DERIVED` from cleaner availability.
 - **Admin 2FA**: `/admin/settings/security` enrols an authenticator app; codes are then required at sign-in. Needs a 32-byte base64 `AUTH_ENCRYPTION_KEY`.
-- **Rate limits** (Postgres-backed, no Redis): quotes 60/min per IP, sign-in codes 5/15 min per phone, magic links 5/15 min per email, admin login 10/15 min per email.
+- **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP, sign-in codes 5/15 min per phone, magic links 5/15 min per email, admin login 10/15 min per email.
 - **Retention**: photos are purged after 90 days (`retention` task, daily); super admins can delete a customer's personal data while keeping financial records.
 
 ## Scripts

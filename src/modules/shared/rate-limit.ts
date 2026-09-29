@@ -13,21 +13,32 @@ export async function rateLimit(
   limit: number,
   windowSeconds: number,
   now = new Date(),
+  opts: { consume?: boolean } = {},
 ): Promise<LimitResult> {
   const windowMs = windowSeconds * 1000;
   const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs);
   const key = `${scope}:${subject}:${windowStart.getTime()}`;
-  const row = await prisma.rateLimit.upsert({
-    where: { key },
-    update: { count: { increment: 1 } },
-    create: { key, windowStart, count: 1 },
-  });
+  const consume = opts.consume ?? true;
+  const row = consume
+    ? await prisma.rateLimit.upsert({
+        where: { key },
+        update: { count: { increment: 1 } },
+        create: { key, windowStart, count: 1 },
+      })
+    : ((await prisma.rateLimit.findUnique({ where: { key } })) ?? { count: 0 });
   const retryAfterSeconds = Math.ceil((windowStart.getTime() + windowMs - now.getTime()) / 1000);
-  return {
-    allowed: row.count <= limit,
-    remaining: Math.max(0, limit - row.count),
-    retryAfterSeconds,
-  };
+  const count = consume ? row.count : row.count + 1; // what the next attempt would be
+  return { allowed: count <= limit, remaining: Math.max(0, limit - count), retryAfterSeconds };
+}
+
+/** Records one failed attempt (e.g. a wrong password) without checking. */
+export async function recordFailure(
+  scope: string,
+  subject: string,
+  windowSeconds: number,
+  now = new Date(),
+): Promise<void> {
+  await rateLimit(scope, subject, Number.MAX_SAFE_INTEGER, windowSeconds, now);
 }
 
 export async function clientIp(): Promise<string> {

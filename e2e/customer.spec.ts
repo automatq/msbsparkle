@@ -131,7 +131,7 @@ test("customer can rate and tip a completed visit; the cleaner's earnings includ
   await ap.waitForURL(/\/admin\/jobs\/[^/?]+$/);
   await ap.getByRole("combobox").first().selectOption({ label: "Daniel Reyes" });
   await ap.getByLabel("Ignore conflicts").check();
-  await ap.getByRole("button", { name: "Assign", exact: true }).click();
+  await ap.getByTestId("assign-manual").click();
   await expect(ap.getByText("Done").first()).toBeVisible();
   // Walk the job to COMPLETED via admin transitions.
   for (const s of ["→ IN PROGRESS", "→ COMPLETED"]) {

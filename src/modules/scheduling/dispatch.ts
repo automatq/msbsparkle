@@ -1,7 +1,7 @@
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { dateColumnToLocalDate, localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
-import { assignCleaner, findConflicts } from "./assignment";
+import { assignCleaner, effectiveEnd, findConflicts } from "./assignment";
 import { rankCleaners, type CandidateCleaner, type RankedCleaner } from "./ranking";
 
 const SKILL_FOR_SERVICE: Record<string, string> = {
@@ -62,7 +62,7 @@ export async function suggestCleaners(jobId: string): Promise<RankedCleaner[]> {
   for (const c of cleaners) {
     const conflicts =
       c.status === "ACTIVE"
-        ? (await findConflicts(c.id, job.scheduledStartAt, job.scheduledEndAt, job.id)).length
+        ? (await findConflicts(c.id, job.scheduledStartAt, effectiveEnd(job), job.id)).length
         : 0;
     candidates.push({
       id: c.id,

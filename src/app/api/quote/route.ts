@@ -4,7 +4,7 @@ import { createQuote } from "@/modules/pricing/quote-service";
 import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 
 export async function POST(req: Request) {
-  const rl = await rateLimit("quote", await clientIp(), 60, 60);
+  const rl = await rateLimit("quote", await clientIp(), 120, 60);
   if (!rl.allowed)
     return NextResponse.json(
       { ok: false, error: { code: "RATE_LIMITED" } },

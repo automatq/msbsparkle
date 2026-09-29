@@ -57,7 +57,7 @@ export async function lookupPostalAction(postalInput: string): Promise<RegionLoo
 }
 
 export async function quoteAction(raw: QuoteRequest) {
-  const rl = await rateLimit("quote", await clientIp(), 60, 60);
+  const rl = await rateLimit("quote", await clientIp(), 120, 60);
   if (!rl.allowed)
     return {
       ok: false as const,

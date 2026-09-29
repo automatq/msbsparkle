@@ -53,7 +53,7 @@ export type AssignResult =
     };
 
 /** Job end for conflict purposes = later of window end and window start + estimated minutes. */
-function effectiveEnd(job: {
+export function effectiveEnd(job: {
   scheduledStartAt: Date;
   scheduledEndAt: Date;
   estimatedMinutes: number;
