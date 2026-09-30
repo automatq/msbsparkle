@@ -53,19 +53,26 @@ export async function sendSms(msg: {
     (await prisma.notification.findUnique({ where: { dedupeKey: msg.dedupeKey } }))
   )
     return;
-  const row = await prisma.notification.create({
-    data: {
-      organizationId: msg.organizationId,
-      channel: "SMS",
-      templateKey: msg.templateKey,
-      recipientType: msg.recipientType,
-      recipientId: msg.recipientId ?? null,
-      to: msg.to,
-      jobId: msg.jobId ?? null,
-      dedupeKey: msg.dedupeKey ?? null,
-      payload: {},
-    },
-  });
+  let row;
+  try {
+    row = await prisma.notification.create({
+      data: {
+        organizationId: msg.organizationId,
+        channel: "SMS",
+        templateKey: msg.templateKey,
+        recipientType: msg.recipientType,
+        recipientId: msg.recipientId ?? null,
+        to: msg.to,
+        jobId: msg.jobId ?? null,
+        dedupeKey: msg.dedupeKey ?? null,
+        payload: {},
+      },
+    });
+  } catch (e) {
+    // A concurrent run already recorded this dedupe key: nothing to send.
+    if (isDuplicate(e)) return;
+    throw e;
+  }
   try {
     const id = await deliver(msg.to, msg.body);
     await prisma.notification.update({
@@ -79,4 +86,8 @@ export async function sendSms(msg: {
     });
     throw e;
   }
+}
+
+function isDuplicate(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
 }

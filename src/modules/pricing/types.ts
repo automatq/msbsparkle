@@ -58,6 +58,7 @@ export type QuoteStep =
   | "MIN_JOB_FLOOR"
   | "FREQUENCY_DISCOUNT"
   | "PROMO"
+  | "ADJUSTMENT"
   | "TAX";
 
 export type QuoteLine = {
