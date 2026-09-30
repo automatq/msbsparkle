@@ -27,6 +27,7 @@ export type BookingForMaterialize = {
   pausedFrom: Date | null;
   pausedUntil: Date | null;
   generatedThrough: Date | null;
+  sequenceOffset?: number;
   bedrooms: number;
   bathrooms: { toString(): string } | number;
   sqft: number | null;
@@ -73,7 +74,8 @@ export async function materializeJobs(
   });
   const created: string[] = [];
   for (const occ of list) {
-    const isFirst = occ.sequenceNumber === 1;
+    const seq = occ.sequenceNumber + (booking.sequenceOffset ?? 0);
+    const isFirst = seq === 1;
     let quoteId: string;
     let estimatedMinutes: number;
     if (isFirst && ctx.firstQuoteId) {
@@ -118,7 +120,7 @@ export async function materializeJobs(
         regionId: booking.regionId,
         bookingId: booking.id,
         customerId: booking.customerId,
-        sequenceNumber: occ.sequenceNumber,
+        sequenceNumber: seq,
         status: "CONFIRMED",
         scheduledDate: localDateToDateColumn(occ.date),
         windowStartLocal: ctx.windowStartLocal,
@@ -151,7 +153,7 @@ export async function materializeJobs(
         jobId: job.id,
         type: "STATUS_CHANGED",
         actorType: "SYSTEM",
-        data: { to: "CONFIRMED", sequenceNumber: occ.sequenceNumber },
+        data: { to: "CONFIRMED", sequenceNumber: seq },
       },
     });
     created.push(job.id);

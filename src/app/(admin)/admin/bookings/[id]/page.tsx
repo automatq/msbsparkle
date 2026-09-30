@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookingControls } from "@/components/admin/booking-panels";
+import { SeriesEditor } from "@/components/booking/series-editor";
 import { StatusBadge } from "@/components/admin/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -44,6 +45,22 @@ export default async function BookingPage({ params }: PageProps<"/admin/bookings
     },
   });
   if (!b) notFound();
+  const [seriesWindows, extrasCatalog] = await Promise.all([
+    prisma.arrivalWindow.findMany({
+      where: { regionId: b.regionId, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, label: true },
+    }),
+    prisma.extra.findMany({
+      where: { organizationId: b.organizationId, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { slug: true, name: true, maxQty: true },
+    }),
+  ]);
+  const nextEditable = b.jobs.find(
+    (j) =>
+      ["PENDING", "CONFIRMED", "ASSIGNED"].includes(j.status) && !j.detached && !j.priceLockedAt,
+  );
   try {
     assertRegionAccess(ctx, b.regionId);
   } catch {
@@ -172,6 +189,33 @@ export default async function BookingPage({ params }: PageProps<"/admin/bookings
               />
             </CardContent>
           </Card>
+          {b.frequency !== "ONE_TIME" && ["ACTIVE", "PAUSED"].includes(b.status) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>All future visits</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SeriesEditor
+                  bookingId={b.id}
+                  mode="admin"
+                  windows={seriesWindows}
+                  extras={extrasCatalog}
+                  current={{
+                    frequency: b.frequency as "WEEKLY" | "BIWEEKLY" | "EVERY_4_WEEKS",
+                    windowId: b.windowId,
+                    bedrooms: b.bedrooms,
+                    bathrooms: Number(b.bathrooms),
+                    extras: ((b.extras as { slug: string; qty: number }[]) ?? [])
+                      .slice()
+                      .sort((x, y) => x.slug.localeCompare(y.slug)),
+                    nextDate: nextEditable
+                      ? dateColumnToLocalDate(nextEditable.scheduledDate)
+                      : null,
+                  }}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

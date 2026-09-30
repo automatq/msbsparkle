@@ -1,6 +1,7 @@
 import { prisma } from "@/modules/db/client";
 import { regionWhere } from "@/modules/db/scoped";
 import { requireRole } from "@/modules/auth/session";
+import { TimeOffActions } from "@/components/admin/payout-panels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminDashboard() {
@@ -14,6 +15,16 @@ export default async function AdminDashboard() {
     prisma.job.count({ where: { ...scope, status: { in: ["CONFIRMED", "ASSIGNED"] } } }),
     prisma.customer.count({ where: ctx.isSuperAdmin ? {} : { bookings: { some: scope } } }),
   ]);
+  const timeOff = await prisma.timeOff.findMany({
+    where: {
+      status: "REQUESTED",
+      endsAt: { gte: new Date() },
+      cleaner: ctx.isSuperAdmin ? {} : { homeRegionId: { in: ctx.regionIds } },
+    },
+    include: { cleaner: { include: { homeRegion: true } } },
+    orderBy: { startsAt: "asc" },
+    take: 20,
+  });
   const tiles = [
     ["Regions", regions],
     ["Active cleaners", cleaners],
@@ -36,6 +47,34 @@ export default async function AdminDashboard() {
           </Card>
         ))}
       </div>
+      {timeOff.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Time off requests ({timeOff.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {timeOff.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2"
+                  data-testid={`timeoff-${t.id}`}
+                >
+                  <span>
+                    <span className="font-medium">
+                      {t.cleaner.firstName} {t.cleaner.lastName}
+                    </span>{" "}
+                    · {t.cleaner.homeRegion.name} · {t.startsAt.toISOString().slice(0, 10)} →{" "}
+                    {t.endsAt.toISOString().slice(0, 10)}
+                    {t.reason ? ` · ${t.reason}` : ""}
+                  </span>
+                  <TimeOffActions id={t.id} />
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

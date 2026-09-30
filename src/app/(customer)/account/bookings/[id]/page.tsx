@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/admin/ui";
+import { SeriesEditor } from "@/components/booking/series-editor";
 import { SeriesControls } from "@/components/customer/panels";
 import { requireRole } from "@/modules/auth/session";
 import { customerForCtx } from "@/modules/customer/queries";
@@ -39,6 +40,22 @@ export default async function CustomerBookingPage({ params }: PageProps<"/accoun
     },
   });
   if (!b || b.customerId !== customer.id) notFound();
+  const [seriesWindows, extrasCatalog] = await Promise.all([
+    prisma.arrivalWindow.findMany({
+      where: { regionId: b.regionId, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, label: true },
+    }),
+    prisma.extra.findMany({
+      where: { organizationId: b.organizationId, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { slug: true, name: true, maxQty: true },
+    }),
+  ]);
+  const nextEditable = b.jobs.find(
+    (j) =>
+      ["PENDING", "CONFIRMED", "ASSIGNED"].includes(j.status) && !j.detached && !j.priceLockedAt,
+  );
   const extras = b.extras as { slug: string; qty: number }[];
   return (
     <div className="space-y-6">
@@ -108,9 +125,31 @@ export default async function CustomerBookingPage({ params }: PageProps<"/accoun
             </p>
           </div>
           {b.status !== "CANCELLED" && b.status !== "COMPLETED" && b.frequency !== "ONE_TIME" ? (
-            <div className="rounded-xl border p-3">
-              <SeriesControls bookingId={b.id} status={b.status} />
-            </div>
+            <>
+              <div className="rounded-xl border p-3">
+                <SeriesEditor
+                  bookingId={b.id}
+                  mode="customer"
+                  windows={seriesWindows}
+                  extras={extrasCatalog}
+                  current={{
+                    frequency: b.frequency as "WEEKLY" | "BIWEEKLY" | "EVERY_4_WEEKS",
+                    windowId: b.windowId,
+                    bedrooms: b.bedrooms,
+                    bathrooms: Number(b.bathrooms),
+                    extras: ((b.extras as { slug: string; qty: number }[]) ?? [])
+                      .slice()
+                      .sort((x, y) => x.slug.localeCompare(y.slug)),
+                    nextDate: nextEditable
+                      ? dateColumnToLocalDate(nextEditable.scheduledDate)
+                      : null,
+                  }}
+                />
+              </div>
+              <div className="rounded-xl border p-3">
+                <SeriesControls bookingId={b.id} status={b.status} />
+              </div>
+            </>
           ) : null}
         </div>
       </div>

@@ -44,6 +44,10 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 - **Smart dispatch**: each job page ranks cleaners (preferred, history with the customer, availability, skills, conflicts, rating, daily load) with one-click assign; the dispatch board offers "Auto-assign" for a region day. Regions can switch capacity to `DERIVED` from cleaner availability.
 - **Admin 2FA**: `/admin/settings/security` enrols an authenticator app; codes are then required at sign-in. Needs a 32-byte base64 `AUTH_ENCRYPTION_KEY`.
 - **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP, sign-in codes 5/15 min per phone, magic links 5/15 min per email, admin login 10/15 min per email.
+- **Cleaner payouts**: `/admin/payouts` approves earnings (auto-approved after 48 h with no refund or dispute), batches them per cleaner for a period, exports CSV, and marks payouts paid. Payouts are manual in v1.
+- **Series edits**: "change plan" on the admin booking page and the customer plan page updates frequency, arrival window, start date, home size and extras for all future visits. Size/extras re-price in place; schedule changes regenerate the series. Locked, started and individually edited visits are left alone.
+- **Price adjustments**: admins can add a pre-tax adjustment to a single visit before it is charged.
+- **Time off**: cleaner requests appear on the admin dashboard for approve/decline; approved time off removes the cleaner from suggestions and derived capacity.
 - **Retention**: photos are purged after 90 days (`retention` task, daily); super admins can delete a customer's personal data while keeping financial records.
 
 ## Scripts

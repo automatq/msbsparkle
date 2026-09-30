@@ -11,6 +11,12 @@ import {
   pauseBooking,
   resumeBooking,
 } from "@/modules/bookings/cancel";
+import {
+  applySeriesEdit,
+  previewSeriesEdit,
+  type SeriesChanges,
+  type SeriesEditPreview,
+} from "@/modules/bookings/edit-booking";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { createSetupIntent, verifyAndAttachSetupIntent } from "@/modules/payments/setup-intents";
@@ -34,6 +40,7 @@ async function me() {
   return { ctx, customer, actor: { type: "CUSTOMER", id: customer.id } as Actor };
 }
 function fail(e: unknown): CustomerActionResult {
+  console.error("[customer action]", e);
   return { ok: false, message: e instanceof Error ? e.message : "Something went wrong" };
 }
 function revalidate(bookingId?: string, jobId?: string) {
@@ -434,6 +441,44 @@ export async function setDefaultCardAction(paymentMethodId: string): Promise<Cus
       });
     revalidatePath("/account/payment");
     return { ok: true, message: "Default card updated." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Plan changes ("this and all future visits") ─────────────────────────────
+
+export async function previewPlanEditAction(
+  bookingId: string,
+  changes: SeriesChanges,
+): Promise<{ ok: true; preview: SeriesEditPreview } | { ok: false; message: string }> {
+  try {
+    const { customer } = await me();
+    if (!(await ownedBooking(customer.id, bookingId)))
+      return { ok: false, message: "Booking not found." };
+    return { ok: true, preview: await previewSeriesEdit(bookingId, changes) };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Could not preview" };
+  }
+}
+
+export async function applyPlanEditAction(
+  bookingId: string,
+  changes: SeriesChanges,
+): Promise<CustomerActionResult> {
+  try {
+    const { customer, actor } = await me();
+    if (!(await ownedBooking(customer.id, bookingId)))
+      return { ok: false, message: "Booking not found." };
+    const res = await applySeriesEdit(bookingId, changes, actor);
+    if (!res.ok) return res;
+    revalidate(bookingId);
+    return {
+      ok: true,
+      message: res.regenerated
+        ? "Your plan was updated and upcoming visits rescheduled."
+        : "Your plan was updated for all upcoming visits.",
+    };
   } catch (e) {
     return fail(e);
   }

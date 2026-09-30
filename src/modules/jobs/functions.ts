@@ -8,6 +8,7 @@ import {
   sendReviewRequest,
 } from "./tasks/notify";
 import { runReminders } from "./tasks/reminders";
+import { runEarningsAutoApprove } from "@/modules/payouts/service";
 import { runRetention } from "./tasks/retention";
 import { runSeriesMaterialization } from "./tasks/series";
 
@@ -67,6 +68,11 @@ export const retention = inngest.createFunction(
   async ({ step }) => step.run("purge", () => runRetention()),
 );
 
+export const earningsAutoApprove = inngest.createFunction(
+  { id: "earnings-auto-approve", triggers: [{ cron: "15 * * * *" }] },
+  async ({ step }) => step.run("approve", () => runEarningsAutoApprove()),
+);
+
 export const functions = [
   onBookingConfirmed,
   onJobAssigned,
@@ -77,4 +83,5 @@ export const functions = [
   materializeSeries,
   adminDigest,
   retention,
+  earningsAutoApprove,
 ];

@@ -946,6 +946,8 @@ model Booking {
   pausedFrom       DateTime? @db.Date
   pausedUntil      DateTime? @db.Date
   generatedThrough DateTime? @db.Date
+  /// Added to occurrence numbers after a schedule edit re-anchors the series, so job sequence numbers stay unique.
+  sequenceOffset   Int       @default(0)
 
   // service template copied into each Job
   bedrooms                   Int
