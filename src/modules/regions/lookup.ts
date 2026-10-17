@@ -12,11 +12,17 @@ export function normalizePostal(input: string): { postalCode: string | null; fsa
   return null;
 }
 
-export async function findRegionByFsa(fsa: string) {
+/**
+ * `ServiceArea.fsa` is globally unique today (v1 has one organization), so this filters by
+ * `organizationId` in application code rather than the query itself. If this is ever sold to
+ * multiple organizations serving overlapping FSAs, `fsa` will need to become unique per-org.
+ */
+export async function findRegionByFsa(organizationId: string, fsa: string) {
   const area = await prisma.serviceArea.findUnique({
     where: { fsa },
     include: { region: true },
   });
   if (!area || !area.active || area.region.status !== "ACTIVE") return null;
+  if (area.region.organizationId !== organizationId) return null;
   return area.region;
 }

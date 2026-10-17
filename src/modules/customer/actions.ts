@@ -29,15 +29,15 @@ import {
   todayIn,
   zonedToInstant,
 } from "@/modules/shared/dates";
+import { apiCustomerStorage } from "./api-context";
 import { customerForCtx, ownedBooking, ownedJob } from "./queries";
 
 export type CustomerActionResult =
   { ok: true; message?: string; warnings?: string[] } | { ok: false; message: string };
 
 async function me() {
-  const ctx = await getCtx();
-  const customer = await customerForCtx(ctx);
-  return { ctx, customer, actor: { type: "CUSTOMER", id: customer.id } as Actor };
+  const customer = apiCustomerStorage.getStore() ?? (await customerForCtx(await getCtx()));
+  return { customer, actor: { type: "CUSTOMER", id: customer.id } as Actor };
 }
 function fail(e: unknown): CustomerActionResult {
   console.error("[customer action]", e);

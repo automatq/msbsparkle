@@ -1,11 +1,13 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { JobStatus } from "@/generated/prisma/enums";
 import { assertRegionAccess, getCtx, type Ctx } from "@/modules/auth/session";
 import { cancelBooking, cancelJob, pauseBooking, resumeBooking } from "@/modules/bookings/cancel";
 import { prisma } from "@/modules/db/client";
+import { hashApiKey } from "@/modules/shared/api/org";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
 import { emit } from "@/modules/jobs/client";
@@ -664,6 +666,51 @@ export async function archivePricingAction(tableId: string): Promise<ActionResul
     await getCtx("SUPER_ADMIN");
     await prisma.pricingTable.update({ where: { id: tableId }, data: { status: "ARCHIVED" } });
     revalidatePath("/admin/pricing");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ── Public API (/api/v1/*) access ───────────────────────────────────────────
+
+/** Generates a new API key for the org, shown once; only its hash is stored. */
+export async function regenerateApiKeyAction(): Promise<ActionResult & { apiKey?: string }> {
+  try {
+    const ctx = await getCtx("SUPER_ADMIN");
+    const apiKey = randomBytes(32).toString("base64url");
+    await prisma.organization.update({
+      where: { id: ctx.orgId },
+      data: { apiKeyHash: hashApiKey(apiKey) },
+    });
+    revalidatePath("/admin/settings/api");
+    return { ok: true, apiKey };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function revokeApiKeyAction(): Promise<ActionResult> {
+  try {
+    const ctx = await getCtx("SUPER_ADMIN");
+    await prisma.organization.update({ where: { id: ctx.orgId }, data: { apiKeyHash: null } });
+    revalidatePath("/admin/settings/api");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function updateAllowedOriginAction(allowedOrigin: string): Promise<ActionResult> {
+  try {
+    const ctx = await getCtx("SUPER_ADMIN");
+    const parsed = z.string().trim().url().or(z.literal("")).safeParse(allowedOrigin);
+    if (!parsed.success) return { ok: false, message: "Enter a valid origin URL." };
+    await prisma.organization.update({
+      where: { id: ctx.orgId },
+      data: { allowedOrigin: parsed.data || null },
+    });
+    revalidatePath("/admin/settings/api");
     return { ok: true };
   } catch (e) {
     return fail(e);
