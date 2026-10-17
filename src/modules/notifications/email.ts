@@ -53,20 +53,27 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     const dup = await prisma.notification.findUnique({ where: { dedupeKey: msg.dedupeKey } });
     if (dup) return;
   }
-  const row = await prisma.notification.create({
-    data: {
-      organizationId: msg.organizationId,
-      channel: "EMAIL",
-      templateKey: msg.templateKey,
-      recipientType: msg.recipientType,
-      recipientId: msg.recipientId ?? null,
-      to: msg.to,
-      jobId: msg.jobId ?? null,
-      bookingId: msg.bookingId ?? null,
-      dedupeKey: msg.dedupeKey ?? null,
-      payload: (msg.payload ?? {}) as object,
-    },
-  });
+  let row;
+  try {
+    row = await prisma.notification.create({
+      data: {
+        organizationId: msg.organizationId,
+        channel: "EMAIL",
+        templateKey: msg.templateKey,
+        recipientType: msg.recipientType,
+        recipientId: msg.recipientId ?? null,
+        to: msg.to,
+        jobId: msg.jobId ?? null,
+        bookingId: msg.bookingId ?? null,
+        dedupeKey: msg.dedupeKey ?? null,
+        payload: (msg.payload ?? {}) as object,
+      },
+    });
+  } catch (e) {
+    // A concurrent run already recorded this dedupe key: nothing to send.
+    if (isDuplicate(e)) return;
+    throw e;
+  }
   try {
     const providerMessageId = await deliver(msg);
     await prisma.notification.update({
@@ -80,4 +87,8 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     });
     throw e;
   }
+}
+
+function isDuplicate(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
 }

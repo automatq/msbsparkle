@@ -13,10 +13,12 @@ const NAV = [
   ["/admin/regions", "Regions"],
   ["/admin/pricing", "Pricing"],
   ["/admin/payments", "Payments"],
+  ["/admin/payouts", "Payouts"],
   ["/admin/promos", "Promos"],
   ["/admin/applications", "Applicants"],
   ["/admin/reports", "Reports"],
   ["/admin/settings/security", "Security"],
+  ["/admin/settings/api", "Public API"],
 ] as const;
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {

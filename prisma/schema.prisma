@@ -321,6 +321,8 @@ model Organization {
   defaultCurrency String   @default("CAD")
   stripeAccountId String?
   settings        Json     @default("{}")
+  apiKeyHash      String?  @unique
+  allowedOrigin   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -946,6 +948,8 @@ model Booking {
   pausedFrom       DateTime? @db.Date
   pausedUntil      DateTime? @db.Date
   generatedThrough DateTime? @db.Date
+  /// Added to occurrence numbers after a schedule edit re-anchors the series, so job sequence numbers stay unique.
+  sequenceOffset   Int       @default(0)
 
   // service template copied into each Job
   bedrooms                   Int

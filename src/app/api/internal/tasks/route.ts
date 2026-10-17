@@ -8,6 +8,7 @@ import { sendReviewRequest } from "@/modules/jobs/tasks/notify";
 import { runReminders } from "@/modules/jobs/tasks/reminders";
 import { runSeriesMaterialization } from "@/modules/jobs/tasks/series";
 import { runRetention } from "@/modules/jobs/tasks/retention";
+import { runEarningsAutoApprove } from "@/modules/payouts/service";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
       return NextResponse.json(await runSeriesMaterialization(now));
     case "retries":
       return NextResponse.json(await runPaymentRetries(now));
+    case "earnings":
+      return NextResponse.json(await runEarningsAutoApprove(now));
     case "retention":
       return NextResponse.json(await runRetention(now));
     case "digest":

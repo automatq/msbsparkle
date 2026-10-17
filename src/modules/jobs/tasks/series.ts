@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { bookingQuoteInput } from "@/modules/bookings/quote-input";
 import { prisma } from "@/modules/db/client";
-import type { QuoteInput } from "@/modules/pricing/types";
 import { MATERIALIZE_HORIZON_DAYS, materializeJobs } from "@/modules/scheduling/materialize";
 import { addLocalDays, dateColumnToLocalDate, todayIn } from "@/modules/shared/dates";
 
@@ -14,7 +14,6 @@ export async function runSeriesMaterialization(
       region: true,
       window: true,
       address: true,
-      quotes: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   let jobs = 0;
@@ -23,8 +22,7 @@ export async function runSeriesMaterialization(
     const today = todayIn(b.region.timezone, now);
     const horizon = addLocalDays(today, MATERIALIZE_HORIZON_DAYS);
     if (b.generatedThrough && dateColumnToLocalDate(b.generatedThrough) >= horizon) continue;
-    const template = b.quotes[0]?.inputs as unknown as QuoteInput | undefined;
-    if (!template) continue;
+    const template = await bookingQuoteInput(b.id);
     const created = await prisma.$transaction(
       (tx) =>
         materializeJobs(

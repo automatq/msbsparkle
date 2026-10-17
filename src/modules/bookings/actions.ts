@@ -38,7 +38,8 @@ export type RegionLookupResult =
 export async function lookupPostalAction(postalInput: string): Promise<RegionLookupResult> {
   const postal = normalizePostal(postalInput);
   if (!postal) return { ok: false, code: "INVALID_POSTAL" };
-  const region = await findRegionByFsa(postal.fsa);
+  const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });
+  const region = await findRegionByFsa(org.id, postal.fsa);
   if (!region)
     return { ok: false, code: "OUT_OF_AREA", fsa: postal.fsa, postalCode: postal.postalCode };
   return {
@@ -72,7 +73,8 @@ export async function quoteAction(raw: QuoteRequest) {
       ok: false as const,
       error: { code: "INVALID" as const, message: "Invalid quote request." },
     };
-  return createQuote(parsed.data);
+  const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });
+  return createQuote(org.id, parsed.data);
 }
 
 export async function availabilityAction(

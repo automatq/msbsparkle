@@ -60,6 +60,7 @@ export async function loadPromo(
 
 /** Resolve region/service/promo, run the engine, and persist an anonymous PriceQuote. */
 export async function createQuote(
+  organizationId: string,
   req: QuoteRequest,
 ): Promise<{ ok: true; data: QuoteSuccess } | { ok: false; error: QuoteError }> {
   const postal = normalizePostal(req.postalCode);
@@ -68,7 +69,7 @@ export async function createQuote(
       ok: false,
       error: { code: "INVALID_POSTAL", message: "Enter a valid Canadian postal code." },
     };
-  const region = await findRegionByFsa(postal.fsa);
+  const region = await findRegionByFsa(organizationId, postal.fsa);
   if (!region)
     return {
       ok: false,

@@ -10,6 +10,7 @@ import {
   SuggestPanel,
   UnassignButton,
 } from "@/components/admin/job-panels";
+import { PriceAdjustPanel } from "@/components/admin/payout-panels";
 import { StatusBadge } from "@/components/admin/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assertRegionAccess, requireRole } from "@/modules/auth/session";
@@ -210,6 +211,11 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                     .reduce((s, r) => s + r.amountCents, 0),
                 }))}
               />
+              {!["PAID", "REFUNDED", "PARTIALLY_REFUNDED"].includes(job.paymentStatus) ? (
+                <div className="mt-3 border-t pt-3">
+                  <PriceAdjustPanel jobId={job.id} />
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
