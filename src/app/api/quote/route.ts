@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/modules/db/client";
 import { quoteRequestSchema } from "@/modules/pricing/schemas";
 import { createQuote } from "@/modules/pricing/quote-service";
 import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
       { ok: false, error: { code: "INVALID", issues: parsed.error.issues } },
       { status: 400 },
     );
-  const result = await createQuote(parsed.data);
+  const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });
+  const result = await createQuote(org.id, parsed.data);
   return NextResponse.json(result, { status: result.ok ? 200 : 422 });
 }

@@ -30,6 +30,8 @@ jobs:
       AUTH_SECRET: ci-secret-not-for-production
       AUTH_URL: http://localhost:3000
       AUTH_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      API_JWT_SECRET: ci-api-jwt-secret-not-for-production
+      API_JWT_REFRESH_SECRET: ci-api-jwt-refresh-secret-not-for-production
       EMAIL_FROM: "CI <ci@example.com>"
       SMTP_HOST: localhost
       SMTP_PORT: "1025"

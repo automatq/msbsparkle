@@ -321,6 +321,8 @@ model Organization {
   defaultCurrency String   @default("CAD")
   stripeAccountId String?
   settings        Json     @default("{}")
+  apiKeyHash      String?  @unique
+  allowedOrigin   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
