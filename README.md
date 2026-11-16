@@ -78,7 +78,8 @@ Run from the repo root; they run across the workspace or delegate to `apps/web` 
 pnpm workspace:
 
 - `apps/web` the Next.js app (everything below is relative to it)
-- `packages/shared` (`@msb/shared`) zod schemas and types shared with the upcoming mobile app; pure TypeScript, no server-only imports
+- `apps/mobile` the cleaner app (Expo); see [apps/mobile/README.md](apps/mobile/README.md)
+- `packages/shared` (`@msb/shared`) zod schemas and types shared by the web and mobile apps; pure TypeScript, no server-only imports
 
 Inside `apps/web`:
 
