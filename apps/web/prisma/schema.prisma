@@ -683,12 +683,13 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  roles        UserRole[]
-  accounts     Account[]
-  sessions     Session[]
-  customer     Customer?
-  cleaner      Cleaner?
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  roles          UserRole[]
+  accounts       Account[]
+  sessions       Session[]
+  mobileSessions MobileSession[]
+  customer       Customer?
+  cleaner        Cleaner?
 
   @@unique([organizationId, email])
   @@index([email])
@@ -742,6 +743,32 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/// A signed-in device of the cleaner mobile app. Tokens are random and stored only as SHA-256
+/// hashes. The access token is short-lived; the refresh token is single-use (rotated on every
+/// refresh) and replaying the previous one revokes the session. A bump of User.sessionVersion
+/// (e.g. the cleaner was suspended) invalidates every session.
+model MobileSession {
+  id                  String    @id @default(cuid())
+  userId              String
+  deviceName          String
+  platform            String
+  appVersion          String?
+  accessTokenHash     String    @unique
+  accessExpiresAt     DateTime
+  refreshTokenHash    String    @unique
+  previousRefreshHash String?   @unique
+  refreshExpiresAt    DateTime
+  sessionVersion      Int
+  createdAt           DateTime  @default(now())
+  lastSeenAt          DateTime  @default(now())
+  revokedAt           DateTime?
+  revokedReason       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Customer {

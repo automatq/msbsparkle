@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { getMobileAuth } from "@/modules/auth/mobile";
 import { getOptionalCtx } from "@/modules/auth/session";
 import { hasRole } from "@/modules/auth/roles";
 import { prisma } from "@/modules/db/client";
@@ -13,10 +14,11 @@ const NOT_FOUND = () => new Response("Not found", { status: 404 });
  * cleaners who accepted it, and the customer who owns it. Everyone else (including cleaners who
  * were only offered the job, declined it or were removed) gets a 404.
  */
-export async function GET(_req: NextRequest, ctx: RouteContext<"/api/uploads/[...key]">) {
+export async function GET(req: NextRequest, ctx: RouteContext<"/api/uploads/[...key]">) {
   const { key: parts } = await ctx.params;
   const key = parts.map(decodeURIComponent).join("/");
-  const session = await getOptionalCtx();
+  // Browser sessions use the Auth.js cookie; the mobile app sends its bearer token.
+  const session = (await getOptionalCtx()) ?? (await getMobileAuth(req))?.ctx ?? null;
   if (!session) return new Response("Unauthorized", { status: 401 });
 
   const photo = await prisma.jobPhoto.findFirst({

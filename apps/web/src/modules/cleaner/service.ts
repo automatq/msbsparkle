@@ -14,9 +14,18 @@ import { transitionJob, type Actor } from "@/modules/jobs/state-machine";
 import { addLocalDays, dateColumnToLocalDate, todayIn } from "@/modules/shared/dates";
 import { putObject } from "@/modules/storage";
 import { sniffImageType } from "@/modules/storage/image-type";
+import {
+  availabilitySchema,
+  photoKindSchema,
+  positionSchema,
+  timeOffSchema,
+  type PhotoKind as PhotoKindInput,
+  type Position,
+} from "@msb/shared/mobile-api";
 import { isClosed, permissionsFor } from "./permissions";
 
 export { permissionsFor, type CleanerPermissions } from "./permissions";
+export type { PhotoKindInput, Position };
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -131,35 +140,6 @@ async function ensureChecklist(jobId: string) {
 }
 
 // ── Inputs ──────────────────────────────────────────────────────────────────
-
-export const positionSchema = z
-  .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
-  .nullable();
-export type Position = z.infer<typeof positionSchema>;
-
-export const photoKindSchema = z.enum(["BEFORE", "AFTER", "ISSUE"]);
-export type PhotoKindInput = z.infer<typeof photoKindSchema>;
-
-export const availabilitySchema = z
-  .array(
-    z
-      .object({
-        weekday: z.number().int().min(0).max(6),
-        startLocal: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM times."),
-        endLocal: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM times."),
-      })
-      .refine((r) => r.startLocal < r.endLocal, "Each start time must be before its end time."),
-  )
-  .max(28);
-
-const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Check the dates.");
-export const timeOffSchema = z
-  .object({
-    startsAt: localDate,
-    endsAt: localDate,
-    reason: z.string().trim().max(300).optional().default(""),
-  })
-  .refine((t) => t.startsAt <= t.endsAt, "Check the dates.");
 
 /** Matches serverActions.bodySizeLimit in next.config.ts, minus multipart overhead. */
 export const MAX_PHOTO_BYTES = 4 * 1024 * 1024 - 64 * 1024;
@@ -453,6 +433,7 @@ export async function getJobDetail(actor: CleanerActor, jobId: string) {
           customer: true,
           service: true,
           booking: true,
+          address: { select: { lat: true, lng: true } },
           checklist: { orderBy: { sortOrder: "asc" } },
           photos: { orderBy: { takenAt: "asc" } },
           assignments: { where: { status: "ACCEPTED" }, include: { cleaner: true } },
