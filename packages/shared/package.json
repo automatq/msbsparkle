@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     "./pricing": "./src/pricing.ts",
-    "./bookings": "./src/bookings.ts"
+    "./bookings": "./src/bookings.ts",
+    "./mobile-api": "./src/mobile-api.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
