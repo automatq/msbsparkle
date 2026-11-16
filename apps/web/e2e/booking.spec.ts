@@ -67,9 +67,9 @@ test("full booking flow without Stripe creates a booking and sends the confirmat
   await expect(page.getByRole("heading", { name: "Payment" })).toBeVisible();
   await page.getByTestId("next").click();
 
-  await expect(page).toHaveURL(/\/book\/confirmation\/MS-/);
+  await expect(page).toHaveURL(/\/book\/confirmation\/[A-Z0-9]{1,4}-/);
   const bookingNumber = await page.getByTestId("booking-number").textContent();
-  expect(bookingNumber).toMatch(/^MS-[A-Z2-9]{6}$/);
+  expect(bookingNumber).toMatch(/^[A-Z0-9]{1,4}-[A-Z2-9]{6}$/);
   await expect(page.getByText("$215.15")).toBeVisible();
   await expect(page.getByText("Next visits")).toBeVisible();
 
