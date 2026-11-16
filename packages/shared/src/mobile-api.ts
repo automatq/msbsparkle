@@ -89,6 +89,23 @@ export const positionBody = z.object({ position: positionSchema.default(null) })
 export const checklistBody = z.object({ done: z.boolean() });
 export const availabilityBody = z.object({ rows: availabilitySchema });
 export const timeOffBody = timeOffSchema;
+/** Expo push token from `getExpoPushTokenAsync()`. */
+export const expoPushTokenSchema = z
+  .string()
+  .trim()
+  .regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, "Not an Expo push token.");
+export const registerDeviceBody = z.object({
+  expoPushToken: expoPushTokenSchema,
+  platform: z.enum(["ios", "android", "web", "other"]).default("other"),
+});
+export const unregisterDeviceBody = z.object({ expoPushToken: expoPushTokenSchema });
+
+/**
+ * What a push carries in `data`. `jobId` means "open this job"; `kind` is one of
+ * offer | assigned | rescheduled | reminder (with jobId) or cancelled | removed (without).
+ */
+export type PushData = { kind: string; jobId?: string };
+
 /** Multipart fields for `POST jobs/:id/photos`, next to the `file` part. */
 export const photoFields = z.object({
   kind: photoKindSchema,

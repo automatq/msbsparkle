@@ -12,7 +12,14 @@ const wrap = (title: string, body: string, brand: string) =>
 const btn = (href: string, label: string) =>
   `<p style="margin:20px 0"><a href="${href}" style="background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">${esc(label)}</a></p>`;
 
-export type Msg = { subject: string; html: string; text: string; sms: string };
+export type Msg = {
+  subject: string;
+  html: string;
+  text: string;
+  sms: string;
+  /** For the cleaner app. `data.jobId` makes a tap open that job. */
+  push?: { title: string; body: string; data?: Record<string, string> };
+};
 
 export function reminderTemplate(d: {
   brand: string;
@@ -42,6 +49,7 @@ export function reminderTemplate(d: {
 
 export function cleanerAssignedTemplate(d: {
   brand: string;
+  jobId: string;
   firstName: string;
   offered: boolean;
   when: string;
@@ -60,7 +68,81 @@ export function cleanerAssignedTemplate(d: {
     d.brand,
   );
   const sms = `${d.brand}: ${d.offered ? "job offer" : "new job"} ${d.when} ${d.windowLabel}, ${d.serviceName} in ${d.area}. ${d.jobUrl}`;
-  return { subject, html, text, sms };
+  const push = {
+    title: d.offered ? "New job offer" : "New job",
+    body: `${d.when}, ${d.windowLabel} · ${d.serviceName} in ${d.area}${d.offered ? ". Tap to accept or decline." : ""}`,
+    data: { jobId: d.jobId, kind: d.offered ? "offer" : "assigned" },
+  };
+  return { subject, html, text, sms, push };
+}
+
+export type CleanerJobChange = "cancelled" | "rescheduled" | "removed";
+
+/** Tells a cleaner a job they had was cancelled, moved, or taken off their schedule. */
+export function cleanerJobChangedTemplate(d: {
+  brand: string;
+  jobId: string;
+  firstName: string;
+  change: CleanerJobChange;
+  when: string; // the (new, for rescheduled) date
+  windowLabel: string;
+  serviceName: string;
+  area: string;
+  previousWhen?: string;
+  jobUrl: string;
+  scheduleUrl: string;
+}): Msg {
+  const what = `${d.serviceName} in ${d.area}`;
+  const line =
+    d.change === "cancelled"
+      ? `Your ${d.when} job (${what}) was cancelled.`
+      : d.change === "removed"
+        ? `You're no longer on the ${d.when} job (${what}).`
+        : `Your job (${what}) moved${d.previousWhen ? ` from ${d.previousWhen}` : ""} to ${d.when}, arrival ${d.windowLabel}.`;
+  const title =
+    d.change === "cancelled"
+      ? "Job cancelled"
+      : d.change === "removed"
+        ? "Removed from a job"
+        : "Job rescheduled";
+  const link = d.change === "rescheduled" ? d.jobUrl : d.scheduleUrl;
+  const subject = `${title}: ${d.when}`;
+  const text = `Hi ${d.firstName}, ${line} ${link}`;
+  const html = wrap(
+    title,
+    `<p>${esc(line)}</p>${btn(link, d.change === "rescheduled" ? "View job" : "Your schedule")}`,
+    d.brand,
+  );
+  return {
+    subject,
+    html,
+    text,
+    sms: `${d.brand}: ${line}`,
+    push: {
+      title,
+      body: line,
+      data: d.change === "rescheduled" ? { jobId: d.jobId, kind: d.change } : { kind: d.change },
+    },
+  };
+}
+
+/** Day-before reminder for the cleaner, pushed to the app (SMS when they have no app). */
+export function cleanerReminderTemplate(d: {
+  brand: string;
+  jobId: string;
+  when: string;
+  windowLabel: string;
+  serviceName: string;
+  area: string;
+}): Msg {
+  const body = `Tomorrow ${d.windowLabel}: ${d.serviceName} in ${d.area}.`;
+  return {
+    subject: `Tomorrow: ${d.serviceName} in ${d.area}`,
+    html: "",
+    text: body,
+    sms: `${d.brand}: ${body}`,
+    push: { title: "Job tomorrow", body, data: { jobId: d.jobId, kind: "reminder" } },
+  };
 }
 
 export function paymentFailedTemplate(d: {

@@ -1,6 +1,7 @@
 import type { ActorType } from "@/generated/prisma/enums";
 import { prisma } from "@/modules/db/client";
 import { sendEmail } from "./email";
+import { sendPush } from "./push";
 import { normalizePhone, sendSms } from "./sms";
 import type { Msg } from "./templates";
 import { brandName, siteUrl } from "@/modules/shared/site";
@@ -15,12 +16,18 @@ type Target = {
   email: string;
   phone: string | null;
   smsOptOut?: boolean;
+  /** Login of the recipient; needed for push (the cleaner app). */
+  userId?: string | null;
   jobId?: string | null;
   bookingId?: string | null;
 };
 
+export type Channel = "email" | "sms" | "push";
+
 /**
- * Sends a message by email and, when the recipient has a mobile and hasn't opted out, by SMS.
+ * Sends a message on the given channels: email; SMS when the recipient has a mobile and hasn't
+ * opted out; push to the recipient's signed-in app devices. With `smsOnlyWithoutPush`, the SMS is
+ * only sent when the push reached no device (cleaners with the app don't get both).
  * dedupeKey guards each channel independently so a retry never double-sends.
  */
 export async function notify(
@@ -28,7 +35,8 @@ export async function notify(
   templateKey: string,
   msg: Msg,
   dedupeKey: string,
-  channels: ("email" | "sms")[] = ["email", "sms"],
+  channels: Channel[] = ["email", "sms"],
+  opts: { smsOnlyWithoutPush?: boolean } = {},
 ): Promise<void> {
   const base = {
     organizationId: target.organizationId,
@@ -38,6 +46,18 @@ export async function notify(
     bookingId: target.bookingId ?? null,
     templateKey,
   };
+  let pushed = 0;
+  if (channels.includes("push") && msg.push && target.userId) {
+    pushed = await sendPush({
+      ...base,
+      userId: target.userId,
+      payload: msg.push,
+      dedupeKey: `${dedupeKey}:push`,
+    }).catch((e) => {
+      console.error("push failed", templateKey, e);
+      return 0;
+    });
+  }
   if (channels.includes("email")) {
     await sendEmail({
       ...base,
@@ -49,7 +69,8 @@ export async function notify(
     }).catch((e) => console.error("email failed", templateKey, e));
   }
   const phone = target.phone ? normalizePhone(target.phone) : null;
-  if (channels.includes("sms") && msg.sms && phone && !target.smsOptOut) {
+  const smsWanted = channels.includes("sms") && !(opts.smsOnlyWithoutPush && pushed > 0);
+  if (smsWanted && msg.sms && phone && !target.smsOptOut) {
     await sendSms({ ...base, to: phone, body: msg.sms, dedupeKey: `${dedupeKey}:sms` }).catch((e) =>
       console.error("sms failed", templateKey, e),
     );
@@ -83,6 +104,7 @@ export async function cleanerTarget(
     recipientId: c.id,
     email: c.email,
     phone: c.phone,
+    userId: c.userId,
     ...extra,
   };
 }

@@ -169,9 +169,9 @@ export async function unassignCleaner(
   actor: Actor,
   reason = "REASSIGNED",
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  const removed = await prisma.$transaction(async (tx) => {
     const a = await tx.assignment.findUnique({ where: { jobId_cleanerId: { jobId, cleanerId } } });
-    if (!a || a.status === "REMOVED" || a.status === "DECLINED") return;
+    if (!a || a.status === "REMOVED" || a.status === "DECLINED") return false;
     await tx.assignment.update({
       where: { id: a.id },
       data: { status: "REMOVED", removedReason: reason, respondedAt: new Date() },
@@ -197,7 +197,15 @@ export async function unassignCleaner(
       if (job.status === "EN_ROUTE")
         await transitionJob(tx, jobId, "CONFIRMED", actor, { reason: "all cleaners removed" });
     }
+    return a.status === "ACCEPTED" || a.status === "OFFERED";
   });
+  if (removed)
+    await emit("job/cleaner-changed", {
+      jobId,
+      cleanerIds: [cleanerId],
+      change: "removed",
+      nonce: String(Date.now()),
+    });
 }
 
 export type RescheduleInput = {
@@ -249,6 +257,7 @@ export async function rescheduleJob(
       );
   }
   const before = { scheduledDate: job.scheduledDate, windowStartLocal: job.windowStartLocal };
+  const previousStartAt = job.scheduledStartAt.toISOString();
   await prisma.$transaction(async (tx) => {
     await tx.job.update({
       where: { id: job.id },
@@ -275,5 +284,13 @@ export async function rescheduleJob(
       },
     });
   });
+  if (job.assignments.length && start.toISOString() !== previousStartAt)
+    await emit("job/cleaner-changed", {
+      jobId: job.id,
+      cleanerIds: job.assignments.map((a) => a.cleanerId),
+      change: "rescheduled",
+      nonce: start.toISOString(),
+      previousStartAt,
+    });
   return { ok: true as const, warnings };
 }

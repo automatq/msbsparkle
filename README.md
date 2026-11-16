@@ -53,6 +53,7 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 - Sign in: `POST auth/otp/request` `{phone}` → code by SMS (email in dev) → `POST auth/otp/verify` `{phone, code, device}` → `{accessToken, refreshToken}`.
 - Send `Authorization: Bearer <accessToken>` (15 min). On 401 `UNAUTHORIZED`, call `POST auth/refresh` once and retry. Refresh tokens are single-use: replaying an old one ends the session (`SESSION_ENDED`).
 - Endpoints: `me`, `jobs`, `jobs/:id`, `jobs/:id/{respond,en-route,check-in,check-out,photos}`, `jobs/:id/checklist/:itemId` (PUT), `earnings`, `availability` (GET/PUT), `time-off`, `auth/logout`.
+- Push: the app registers its Expo token with `POST devices` (`DELETE` to stop). Cleaners get offers, assignments, cancellations, reschedules, removals and a day-before reminder by push; SMS only goes to cleaners without the app. Set `PUSH_DELIVERY=expo` to send real pushes outside production. The `push-receipts` task (every 30 min) disables dead tokens.
 - Suspending a cleaner revokes their app sessions immediately. Photos (`/api/uploads/…`) accept the bearer token too.
 
 ## Deploying for a company
