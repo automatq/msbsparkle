@@ -3,6 +3,8 @@ import { appUrl, brand, cleanerTarget, customerTarget, notify } from "@/modules/
 import {
   cleanerAssignedTemplate,
   cleanerJobChangedTemplate,
+  customerTrackingTemplate,
+  type TrackingKind,
   reviewRequestTemplate,
   type CleanerJobChange,
 } from "@/modules/notifications/templates";
@@ -133,4 +135,39 @@ export async function sendBookingConfirmationSms(bookingId: string): Promise<voi
     `booking.confirmed.sms:${bookingId}`,
     ["sms"],
   );
+}
+
+/**
+ * Tells the customer their cleaner is on the way / arriving / running late, with the tracking
+ * link. "On the way" goes by SMS and email; the follow-ups by SMS only (email if they opted out).
+ */
+export async function notifyCustomerTracking(
+  assignmentId: string,
+  kind: TrackingKind,
+): Promise<{ sent: boolean }> {
+  const a = await prisma.assignment.findUniqueOrThrow({
+    where: { id: assignmentId },
+    include: { cleaner: true, job: { include: { customer: true } } },
+  });
+  if (!a.trackingToken || a.status !== "ACCEPTED" || a.job.status !== "EN_ROUTE")
+    return { sent: false };
+  const msg = customerTrackingTemplate({
+    brand: brand(),
+    kind,
+    customerFirstName: a.job.customer.firstName,
+    cleanerFirstName: a.cleaner.firstName,
+    eta: a.etaAt ? formatInZone(a.etaAt, a.job.timezone, "h:mm a") : null,
+    trackUrl: `${appUrl()}/track/${a.trackingToken}`,
+  });
+  const target = await customerTarget(a.job.customerId, { jobId: a.jobId });
+  const channels: ("email" | "sms")[] =
+    kind === "en_route" || target.smsOptOut || !target.phone ? ["email", "sms"] : ["sms"];
+  await notify(
+    target,
+    `customer.tracking.${kind}`,
+    msg,
+    `tracking.${kind}:${a.id}:${a.trackingToken}`,
+    channels,
+  );
+  return { sent: true };
 }

@@ -89,6 +89,20 @@ export const positionBody = z.object({ position: positionSchema.default(null) })
 export const checklistBody = z.object({ done: z.boolean() });
 export const availabilityBody = z.object({ rows: availabilitySchema });
 export const timeOffBody = timeOffSchema;
+/** One background-location fix from the cleaner app (expo-location). */
+export const locationPingSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracyM: z.number().min(0).max(5000).optional(),
+  recordedAt: z.iso.datetime({ offset: true }),
+});
+/**
+ * `POST jobs/:id/location`, sent between "On my way" and check-in. Batch fixes (up to 50); when
+ * the answer says `tracking: false`, stop sending.
+ */
+export const locationBody = z.object({ pings: z.array(locationPingSchema).min(1).max(50) });
+export type LocationPing = z.infer<typeof locationPingSchema>;
+
 /** Expo push token from `getExpoPushTokenAsync()`. */
 export const expoPushTokenSchema = z
   .string()
@@ -198,6 +212,8 @@ export type JobDetail = JobSummary & {
 };
 
 export type CheckOutResult = { completed: boolean };
+export type EnRouteResult = { trackingToken: string };
+export type LocationResult = { tracking: boolean; etaAt: string | null };
 export type PhotoResult = { id: string; url: string };
 
 export type Earnings = {

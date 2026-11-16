@@ -6,6 +6,7 @@ import { runAdminDigest } from "./tasks/digest";
 import {
   notifyCleanerAssigned,
   notifyCleanerJobChanged,
+  notifyCustomerTracking,
   sendBookingConfirmationSms,
   sendReviewRequest,
 } from "./tasks/notify";
@@ -44,6 +45,14 @@ export const onCleanerJobChanged = inngest.createFunction(
           previousStartAt: d.previousStartAt,
         }),
       );
+  },
+);
+
+export const onTracking = inngest.createFunction(
+  { id: "job-tracking", triggers: [{ event: "job/tracking" }] },
+  async ({ event, step }) => {
+    const d = event.data as Events["job/tracking"]["data"];
+    await step.run("notify-customer", () => notifyCustomerTracking(d.assignmentId, d.kind));
   },
 );
 
@@ -93,6 +102,7 @@ export const functions = [
   onBookingConfirmed,
   onJobAssigned,
   onCleanerJobChanged,
+  onTracking,
   onJobCompleted,
   reminders,
   cutoff,

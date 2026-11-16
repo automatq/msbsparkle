@@ -2,13 +2,17 @@ import type { ActorType } from "@/generated/prisma/enums";
 import { prisma } from "@/modules/db/client";
 import { pruneRateLimits } from "@/modules/shared/rate-limit";
 import { deleteObject } from "@/modules/storage";
+import { purgeLocations } from "@/modules/tracking/service";
 
 export const PHOTO_RETENTION_DAYS = 90;
 
-/** Deletes job photos older than the retention window (files + rows) and prunes rate-limit windows. */
+/**
+ * Deletes job photos older than the retention window (files + rows), cleaner location pings older
+ * than 7 days, and prunes rate-limit windows.
+ */
 export async function runRetention(
   now = new Date(),
-): Promise<{ photosDeleted: number; rateLimitRowsPruned: number }> {
+): Promise<{ photosDeleted: number; locationPingsDeleted: number; rateLimitRowsPruned: number }> {
   const cutoff = new Date(now.getTime() - PHOTO_RETENTION_DAYS * 86_400_000);
   const photos = await prisma.jobPhoto.findMany({
     where: { takenAt: { lt: cutoff } },
@@ -18,8 +22,9 @@ export async function runRetention(
     await deleteObject(p.storageKey);
     await prisma.jobPhoto.delete({ where: { id: p.id } });
   }
+  const locationPingsDeleted = await purgeLocations(now);
   const rateLimitRowsPruned = await pruneRateLimits(now);
-  return { photosDeleted: photos.length, rateLimitRowsPruned };
+  return { photosDeleted: photos.length, locationPingsDeleted, rateLimitRowsPruned };
 }
 
 /**

@@ -54,6 +54,7 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 - Send `Authorization: Bearer <accessToken>` (15 min). On 401 `UNAUTHORIZED`, call `POST auth/refresh` once and retry. Refresh tokens are single-use: replaying an old one ends the session (`SESSION_ENDED`).
 - Endpoints: `me`, `jobs`, `jobs/:id`, `jobs/:id/{respond,en-route,check-in,check-out,photos}`, `jobs/:id/checklist/:itemId` (PUT), `earnings`, `availability` (GET/PUT), `time-off`, `auth/logout`.
 - Push: the app registers its Expo token with `POST devices` (`DELETE` to stop). Cleaners get offers, assignments, cancellations, reschedules, removals and a day-before reminder by push; SMS only goes to cleaners without the app. Set `PUSH_DELIVERY=expo` to send real pushes outside production. The `push-receipts` task (every 30 min) disables dead tokens.
+- Live tracking: "On my way" (`POST jobs/:id/en-route` with the current position) creates the customer's `/track/<token>` link and texts/emails it with an ETA. The app then sends background location to `POST jobs/:id/location` until check-in (it answers `tracking: false` when to stop). Customers also get "arriving now" (within 300 m) and "running late" (ETA past the window + 10 min). ETAs use Mapbox Directions with `MAPBOX_ACCESS_TOKEN` (straight-line estimate without it); the map needs `NEXT_PUBLIC_MAPBOX_TOKEN`. Pings are kept 7 days.
 - Suspending a cleaner revokes their app sessions immediately. Photos (`/api/uploads/…`) accept the bearer token too.
 
 ## Deploying for a company

@@ -93,7 +93,7 @@ export function ProgressButtons({
             variant="outline"
             className="flex-1"
             disabled={pending}
-            onClick={() => run(() => enRouteAction(jobId))}
+            onClick={() => run(async () => enRouteAction(jobId, await position()))}
           >
             On my way
           </Button>

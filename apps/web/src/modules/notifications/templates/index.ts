@@ -245,3 +245,38 @@ export function adminDigestTemplate(d: {
   );
   return { subject, html, text, sms: "" };
 }
+
+export type TrackingKind = "en_route" | "arriving" | "late";
+
+/** Customer updates while the cleaner is on the way, each with the live tracking link. */
+export function customerTrackingTemplate(d: {
+  brand: string;
+  kind: TrackingKind;
+  customerFirstName: string;
+  cleanerFirstName: string;
+  eta: string | null; // "10:25 AM"
+  trackUrl: string;
+}): Msg {
+  const line =
+    d.kind === "arriving"
+      ? `${d.cleanerFirstName} is arriving now.`
+      : d.kind === "late"
+        ? `${d.cleanerFirstName} is running a little late${d.eta ? ` and should arrive around ${d.eta}` : ""}. Sorry for the wait!`
+        : `${d.cleanerFirstName} is on the way${d.eta ? `, arriving around ${d.eta}` : ""}.`;
+  const title =
+    d.kind === "arriving"
+      ? "Your cleaner is arriving"
+      : d.kind === "late"
+        ? "Your cleaner is running late"
+        : "Your cleaner is on the way";
+  return {
+    subject: `${title}${d.eta && d.kind !== "arriving" ? ` (around ${d.eta})` : ""}`,
+    html: wrap(
+      title,
+      `<p>Hi ${esc(d.customerFirstName)}, ${esc(line)}</p>${btn(d.trackUrl, "Track live")}`,
+      d.brand,
+    ),
+    text: `Hi ${d.customerFirstName}, ${line} Track live: ${d.trackUrl}`,
+    sms: `${d.brand}: ${line} Track: ${d.trackUrl}`,
+  };
+}

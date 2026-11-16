@@ -12,7 +12,9 @@ import { createEarningForAssignment } from "@/modules/cleaner/earnings";
 import { emit } from "@/modules/jobs/client";
 import { transitionJob, type Actor } from "@/modules/jobs/state-machine";
 import { addLocalDays, dateColumnToLocalDate, todayIn } from "@/modules/shared/dates";
+import { haversineKm } from "@/modules/shared/geo";
 import { putObject } from "@/modules/storage";
+import { startTracking } from "@/modules/tracking/service";
 import { sniffImageType } from "@/modules/storage/image-type";
 import {
   availabilitySchema,
@@ -179,8 +181,10 @@ export function respondToOffer(actor: CleanerActor, jobId: string, accept: boole
   });
 }
 
-export function goEnRoute(actor: CleanerActor, jobId: string) {
+/** Marks the job on the way and starts live tracking (link + first ETA from `position`). */
+export function goEnRoute(actor: CleanerActor, jobId: string, position: Position = null) {
   return run(async () => {
+    const pos = positionSchema.parse(position);
     const a = await loadAssignment(actor, jobId);
     const can = permissionsFor(a);
     ensure(a.status === "ACCEPTED", "PRECONDITION", "Accept the job first.");
@@ -188,7 +192,8 @@ export function goEnRoute(actor: CleanerActor, jobId: string) {
     await prisma.$transaction((tx) =>
       transitionJob(tx, jobId, "EN_ROUTE", jobActor(actor), { cleanerId: actor.cleanerId }),
     );
-    return ok(null, "Marked as on your way");
+    const { trackingToken } = await startTracking(a.id, pos);
+    return ok({ trackingToken }, "On your way. The customer gets a live tracking link.");
   });
 }
 
@@ -486,19 +491,4 @@ export async function getAvailability(actor: CleanerActor) {
     }),
   ]);
   return { timezone: actor.timezone, availability, timeOff };
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-export function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(x));
 }
