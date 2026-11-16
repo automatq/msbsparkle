@@ -117,6 +117,14 @@ export default async function AccountHome() {
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
+                {j.status === "EN_ROUTE" && j.assignments.find((a) => a.trackingToken) ? (
+                  <Link
+                    href={`/track/${j.assignments.find((a) => a.trackingToken)!.trackingToken}`}
+                    className={buttonVariants({ size: "sm" })}
+                  >
+                    Track your cleaner
+                  </Link>
+                ) : null}
                 {["PENDING", "CONFIRMED", "ASSIGNED"].includes(j.status) ? (
                   <ReschedulePanel jobId={j.id} late={late} feeCents={fee} />
                 ) : null}

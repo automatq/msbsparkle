@@ -55,8 +55,8 @@ export async function respondToOfferAction(jobId: string, accept: boolean) {
   return r;
 }
 
-export async function enRouteAction(jobId: string) {
-  const r = await withActor((a) => goEnRoute(a, jobId));
+export async function enRouteAction(jobId: string, position: Position = null) {
+  const r = await withActor((a) => goEnRoute(a, jobId, position));
   revalidateJob(jobId);
   return r;
 }

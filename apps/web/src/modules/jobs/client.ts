@@ -4,6 +4,8 @@ export type Events = {
   "booking/confirmed": { data: { bookingId: string } };
   "job/assigned": { data: { jobId: string; cleanerId: string; offered: boolean } };
   "job/completed": { data: { jobId: string } };
+  /** Live tracking milestones; each tells the customer once. */
+  "job/tracking": { data: { assignmentId: string; kind: "en_route" | "arriving" | "late" } };
   /** A job an assigned/offered cleaner had was cancelled, rescheduled, or they were removed. */
   "job/cleaner-changed": {
     data: {

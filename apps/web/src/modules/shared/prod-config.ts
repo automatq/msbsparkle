@@ -27,6 +27,14 @@ const RECOMMENDED: { name: string; why: string }[] = [
     why: "emails come from Resend's test sender, which only delivers to your own Resend account address",
   },
   {
+    name: "MAPBOX_ACCESS_TOKEN",
+    why: "live tracking ETAs use a rough straight-line estimate instead of traffic-aware drive times",
+  },
+  {
+    name: "NEXT_PUBLIC_MAPBOX_TOKEN",
+    why: "the customer's tracking page shows no map",
+  },
+  {
     name: "TWILIO_ACCOUNT_SID",
     why: "cleaner sign-in codes and reminders go by email instead of SMS",
   },

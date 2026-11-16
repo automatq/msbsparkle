@@ -15,6 +15,8 @@ import { JPEG, cleanerFixtures } from "@/modules/cleaner/test-fixtures";
 import { prisma } from "@/modules/db/client";
 import * as availability from "./availability/route";
 import * as devices from "./devices/route";
+import * as enRoute from "./jobs/[id]/en-route/route";
+import * as location from "./jobs/[id]/location/route";
 import * as earnings from "./earnings/route";
 import * as logout from "./auth/logout/route";
 import * as me from "./me/route";
@@ -284,6 +286,53 @@ describe.skipIf(!enabled)("mobile API (integration)", () => {
       expect(
         (await prisma.pushDevice.findUniqueOrThrow({ where: { expoPushToken } })).disabledAt,
       ).not.toBeNull();
+    });
+
+    it("on my way starts tracking; location pings are accepted until check-in", async () => {
+      const c = await fx.makeCleaner();
+      const other = await fx.makeCleaner();
+      const t = await signIn(c.userId!);
+      const token = t.accessToken;
+      const { job: j } = await fx.makeJob(c.id, "ACCEPTED", { daysAhead: 1 });
+      const { job: theirs } = await fx.makeJob(other.id, "ACCEPTED", { daysAhead: 1 });
+      const params = { id: j.id };
+      const pings = [{ lat: 43.7, lng: -79.4, recordedAt: new Date().toISOString() }];
+
+      // Before "On my way" nothing is tracked.
+      const early = await call<{ tracking: boolean }>(location.POST, {
+        token,
+        params,
+        body: { pings },
+      });
+      expect(early.body).toMatchObject({ ok: true, data: { tracking: false } });
+
+      const go = await call<{ trackingToken: string }>(enRoute.POST, {
+        token,
+        params,
+        body: { position: { lat: 43.7, lng: -79.4 } },
+      });
+      expect(go.body.ok && go.body.data.trackingToken).toBeTruthy();
+      const live = await call<{ tracking: boolean; etaAt: string | null }>(location.POST, {
+        token,
+        params,
+        body: { pings },
+      });
+      expect(live.body).toMatchObject({ ok: true, data: { tracking: true } });
+
+      expect(
+        (await call(location.POST, { token, params, body: { pings: [{ lat: 1 }] } })).status,
+      ).toBe(400);
+      expect(
+        (await call(location.POST, { token, params: { id: theirs.id }, body: { pings } })).status,
+      ).toBe(404);
+
+      await call(checkIn.POST, { token, params, body: {} });
+      const done = await call<{ tracking: boolean }>(location.POST, {
+        token,
+        params,
+        body: { pings },
+      });
+      expect(done.body).toMatchObject({ ok: true, data: { tracking: false } });
     });
 
     it("logout ends the session", async () => {

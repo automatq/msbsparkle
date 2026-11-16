@@ -1106,30 +1106,57 @@ model Job {
 }
 
 model Assignment {
-  id               String           @id @default(cuid())
-  jobId            String
-  cleanerId        String
-  role             AssignmentRole   @default(LEAD)
-  status           AssignmentStatus @default(OFFERED)
-  offeredAt        DateTime         @default(now())
-  respondedAt      DateTime?
-  assignedByUserId String?
-  removedReason    String?
-  checkInAt        DateTime?
-  checkInLat       Float?
-  checkInLng       Float?
-  checkOutAt       DateTime?
-  checkOutLat      Float?
-  checkOutLng      Float?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  jobId              String
+  cleanerId          String
+  role               AssignmentRole   @default(LEAD)
+  status             AssignmentStatus @default(OFFERED)
+  offeredAt          DateTime         @default(now())
+  respondedAt        DateTime?
+  assignedByUserId   String?
+  removedReason      String?
+  checkInAt          DateTime?
+  checkInLat         Float?
+  checkInLng         Float?
+  checkOutAt         DateTime?
+  checkOutLat        Float?
+  checkOutLng        Float?
+  /// Live tracking, set when the cleaner taps "On my way". The token is the customer's /track
+  /// link; location and ETA are shown only while the job is EN_ROUTE.
+  trackingToken      String?          @unique
+  etaAt              DateTime?
+  etaUpdatedAt       DateTime?
+  lastLat            Float?
+  lastLng            Float?
+  lastLocationAt     DateTime?
+  arrivingNotifiedAt DateTime?
+  lateNotifiedAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
-  job     Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  cleaner Cleaner         @relation(fields: [cleanerId], references: [id])
-  earning CleanerEarning?
+  job       Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cleaner   Cleaner         @relation(fields: [cleanerId], references: [id])
+  earning   CleanerEarning?
+  locations LocationPing[]
 
   @@unique([jobId, cleanerId])
   @@index([cleanerId, status])
+}
+
+/// Cleaner positions between "On my way" and check-in. Purged after 7 days (retention task).
+model LocationPing {
+  id           String   @id @default(cuid())
+  assignmentId String
+  lat          Float
+  lng          Float
+  accuracyM    Float?
+  recordedAt   DateTime
+  createdAt    DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId, recordedAt])
+  @@index([recordedAt])
 }
 
 /// Append-only job timeline.
