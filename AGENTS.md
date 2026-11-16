@@ -1,9 +1,8 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# MSB Sparkle monorepo
 
-# This is NOT the Next.js you know
+pnpm workspace. Run scripts from the root (see README "Scripts").
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+- `apps/web`: the Next.js app. Read `apps/web/AGENTS.md` before changing it.
+- `packages/shared` (`@msb/shared`): zod schemas and types shared by the apps. Pure TypeScript: never import Prisma, Next.js, `server-only` or anything from `apps/*`.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+Shared dependency versions (`zod`, `typescript`, `vitest`) live in the `catalog:` in `pnpm-workspace.yaml`; reference them as `"catalog:"`.
