@@ -17,6 +17,7 @@ const NAV = [
   ["/admin/promos", "Promos"],
   ["/admin/applications", "Applicants"],
   ["/admin/reports", "Reports"],
+  ["/admin/settings/embed", "Website widget"],
   ["/admin/settings/security", "Security"],
 ] as const;
 

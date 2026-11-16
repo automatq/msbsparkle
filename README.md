@@ -52,6 +52,8 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 
 One deployment per company. The button provisions Postgres (Neon) and private photo storage (Vercel Blob) and asks for `AUTH_SECRET`, the brand name and the country (`CA` or `US`). Migrations and the starter catalog run automatically on production deploys. Then open `/setup` to create the first admin and region. Full guide: [docs/DEPLOY.md](docs/DEPLOY.md).
 
+To put booking on a company's existing website, copy the snippet from **Admin → Website widget** (`public/embed.js`, served under `/embed/book`).
+
 ## Scripts
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format`

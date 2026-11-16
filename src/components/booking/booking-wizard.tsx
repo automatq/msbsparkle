@@ -71,12 +71,15 @@ export function BookingWizard({
   extras,
   initial,
   adminMode = false,
+  confirmationBase = "/book/confirmation",
 }: {
   services: ServiceOption[];
   extras: ExtraOption[];
   initial?: WizardInitial;
   /** Staff phone orders: no card step, source ADMIN, lands on the admin bookings list. */
   adminMode?: boolean;
+  /** Where to go after booking; the embeddable widget stays inside its iframe. */
+  confirmationBase?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("Location");
@@ -194,6 +197,8 @@ export function BookingWizard({
   const go = useCallback((s: Step) => {
     setStep(s);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // Embedded on another site: let the host page bring the widget's top into view.
+    if (window.parent !== window) window.parent.postMessage({ type: "booking-widget:step" }, "*");
   }, []);
 
   async function submitPostal(e: React.FormEvent) {
@@ -266,7 +271,7 @@ export function BookingWizard({
       router.push(
         adminMode
           ? `/admin/bookings?q=${res.bookingNumber}`
-          : `/book/confirmation/${res.bookingNumber}`,
+          : `${confirmationBase}/${res.bookingNumber}`,
       );
       return;
     }

@@ -47,6 +47,15 @@ two-factor authentication at **Admin → Security**.
 | **Pricing**                          | Clone the default price sheet into a draft, edit the rates, publish.                                                                                             |
 | **Cleaners**, **Promos**, **Cities** | Your team, discount codes, and public city landing pages.                                                                                                        |
 
+## Put booking on the company's website
+
+**Admin → Website widget** has a two-line snippet that embeds the full booking form on any site
+(WordPress, Wix, Squarespace, Webflow…). It resizes itself, can be prefilled (`data-postal`,
+`data-service`, `data-frequency`, …), and fires a `booking-widget:complete` event on the page for
+analytics. Any site may embed it by default; set `EMBED_ALLOWED_ORIGINS` (space-separated origins,
+e.g. `https://acme.com https://www.acme.com`) and redeploy to allow only the company's own site.
+All other pages refuse to be framed.
+
 ## 4. Connect the services that make it a real business
 
 Add these in **Vercel → Project → Settings → Environment Variables** (Production), then redeploy.
