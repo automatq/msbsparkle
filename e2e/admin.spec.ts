@@ -153,3 +153,61 @@ test.describe("admin dispatch", () => {
     expect(afterTotal).toBe(Math.round(((current + 20) * 100 + 2000) * 1.13));
   });
 });
+
+test("admin creates a region, adds a service area and tax, and it starts taking quotes", async ({
+  page,
+}) => {
+  const stamp = Date.now().toString(36);
+  // A fresh Yukon FSA per run (the seed never uses Y), so retries don't collide.
+  const letters = "ABCEGHJKLMNPRSTVWXYZ";
+  const fsa = `Y${2 + Math.floor(Math.random() * 8)}${letters[Math.floor(Math.random() * 20)]}`;
+  const quote = () =>
+    page.request.post("/api/quote", {
+      data: {
+        postalCode: `${fsa} 1A1`,
+        serviceSlug: "standard",
+        bedrooms: 2,
+        bathrooms: 1,
+        frequency: "ONE_TIME",
+        extras: [],
+      },
+    });
+
+  await login(page, "admin@msbsparkle.local");
+  await page.goto("/admin/regions");
+  await page.getByRole("link", { name: "New region" }).click();
+  await page.getByLabel("Name").fill(`Dawson ${stamp}`);
+  await page.getByLabel("Province").selectOption("YT");
+  await page.getByLabel("Timezone").selectOption("America/Whitehorse");
+  await page.getByLabel("Create a public city page for it").uncheck();
+  await page.getByTestId("create-region").click();
+  await page.waitForURL(/\/admin\/regions\/(?!new)[^/]+$/);
+  await expect(page.getByRole("heading", { name: new RegExp(`Dawson ${stamp}`) })).toBeVisible();
+
+  // Invalid and already-served prefixes are reported, the valid one is added.
+  await page.getByLabel("Add FSAs").fill(`${fsa}, 90210 M5V`);
+  await page.getByTestId("add-areas").click();
+  await expect(page.getByText("Added 1 area.")).toBeVisible();
+  await expect(page.getByText("M5V already belongs to Toronto")).toBeVisible();
+  await expect(page.getByTestId("service-areas").getByText(fsa)).toBeVisible();
+
+  // Still "Coming soon": not bookable yet.
+  expect((await (await quote()).json()).ok).toBe(false);
+
+  await page.locator("select").first().selectOption("ACTIVE");
+  await page.getByRole("button", { name: "Save region" }).click();
+  await expect(page.getByText("Done")).toBeVisible();
+
+  await page.goto("/admin/taxes");
+  await page.getByLabel("Province").selectOption("YT");
+  await page.getByLabel("Tax name").fill(`GST ${stamp}`);
+  await page.getByLabel("Rate (%)").fill("5");
+  await page.getByTestId("add-tax").click();
+  await expect(page.getByText("Tax rate saved.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: `GST ${stamp}` })).toBeVisible();
+
+  const res = await (await quote()).json();
+  expect(res.ok).toBe(true);
+  expect(res.data.region.name).toBe(`Dawson ${stamp}`);
+  expect(res.data.quote.taxCents).toBeGreaterThan(0);
+});

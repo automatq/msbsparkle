@@ -16,14 +16,13 @@ export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN");
-  const [tables, regions, taxes] = await Promise.all([
+  const [tables, regions] = await Promise.all([
     prisma.pricingTable.findMany({
       where: { organizationId: ctx.orgId },
       include: { region: true, _count: { select: { rates: true, quotes: true } } },
       orderBy: [{ regionId: "asc" }, { version: "desc" }],
     }),
     prisma.region.findMany({ where: { organizationId: ctx.orgId }, orderBy: { name: "asc" } }),
-    prisma.taxRate.findMany({ orderBy: [{ province: "asc" }, { name: "asc" }] }),
   ]);
   const orgDefault = tables.find((t) => !t.regionId && t.status === "PUBLISHED");
   return (
@@ -88,32 +87,13 @@ export default async function PricingPage() {
           </div>
         </div>
       ) : null}
-      <div>
-        <h2 className="mb-2 font-medium">Tax rates</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Province</TableHead>
-              <TableHead>Tax</TableHead>
-              <TableHead>Rate</TableHead>
-              <TableHead>Effective</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {taxes.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>{t.province}</TableCell>
-                <TableCell>{t.name}</TableCell>
-                <TableCell>{t.rateBps / 100}%</TableCell>
-                <TableCell>
-                  {t.effectiveFrom.toISOString().slice(0, 10)}
-                  {t.effectiveTo ? ` → ${t.effectiveTo.toISOString().slice(0, 10)}` : ""}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Prices are shown before tax. Tax rates are managed on the{" "}
+        <Link href="/admin/taxes" className="underline">
+          Taxes
+        </Link>{" "}
+        page.
+      </p>
     </div>
   );
 }

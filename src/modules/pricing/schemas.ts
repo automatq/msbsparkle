@@ -3,7 +3,7 @@ import { z } from "zod";
 export const frequencySchema = z.enum(["ONE_TIME", "WEEKLY", "BIWEEKLY", "EVERY_4_WEEKS"]);
 
 export const quoteRequestSchema = z.object({
-  postalCode: z.string().min(3).max(7),
+  postalCode: z.string().trim().min(3).max(10), // format checked by the country preset
   serviceSlug: z.string().min(1),
   bedrooms: z.number().int().min(0).max(12),
   bathrooms: z.number().min(1).max(12),

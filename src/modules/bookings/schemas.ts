@@ -12,7 +12,7 @@ export const addressSchema = z.object({
   line1: z.string().trim().min(3).max(120),
   line2: z.string().trim().max(60).optional().or(z.literal("")),
   city: z.string().trim().min(1).max(60),
-  postalCode: z.string().trim().min(6).max(7),
+  postalCode: z.string().trim().min(5).max(10), // format checked by the country preset
   entryInstructions: z.string().trim().max(500).optional().or(z.literal("")),
   parkingInstructions: z.string().trim().max(300).optional().or(z.literal("")),
 });
