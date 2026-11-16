@@ -16,7 +16,7 @@ import {
   quoteAction,
   type RegionLookupResult,
 } from "@/modules/bookings/actions";
-import type { QuoteRequest } from "@/modules/pricing/schemas";
+import type { QuoteRequest } from "@msb/shared/pricing";
 import type { QuoteResult } from "@/modules/pricing/types";
 import type { DayAvailability } from "@/modules/scheduling/availability";
 import { checkGiftCardAction } from "@/modules/gift-cards/actions";

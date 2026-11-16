@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { quoteRequestSchema } from "@/modules/pricing/schemas";
-import { addressSchema } from "./schemas";
+import { quoteRequestSchema } from "./pricing";
+import { addressSchema } from "./bookings";
 
 const address = { line1: "1 Main St", city: "Austin" };
 const quote = { serviceSlug: "standard", bedrooms: 2, bathrooms: 1, frequency: "ONE_TIME" };

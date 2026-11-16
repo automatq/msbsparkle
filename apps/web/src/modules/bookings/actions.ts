@@ -8,7 +8,7 @@ import { ensureCustomer } from "@/modules/payments/customers";
 import { createSetupIntent } from "@/modules/payments/setup-intents";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { createQuote } from "@/modules/pricing/quote-service";
-import { quoteRequestSchema, type QuoteRequest } from "@/modules/pricing/schemas";
+import { quoteRequestSchema, type QuoteRequest } from "@msb/shared/pricing";
 import { areaKey, findRegionForPostal, normalizePostal } from "@/modules/regions/lookup";
 import { loadAvailability, type DayAvailability } from "@/modules/scheduling/availability";
 import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/modules/shared/dates";
@@ -17,7 +17,11 @@ import { getOptionalCtx } from "@/modules/auth/session";
 import { emit } from "@/modules/jobs/client";
 import { allowIp, clientIp, rateLimit } from "@/modules/shared/rate-limit";
 import { createBooking } from "./create-booking";
-import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
+import {
+  confirmBookingSchema,
+  contactSchema,
+  type ConfirmBookingInput,
+} from "@msb/shared/bookings";
 import { brandName, siteUrl } from "@/modules/shared/site";
 
 export type RegionLookupResult =

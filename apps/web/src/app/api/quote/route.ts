@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { quoteRequestSchema } from "@/modules/pricing/schemas";
+import { quoteRequestSchema } from "@msb/shared/pricing";
 import { createQuote } from "@/modules/pricing/quote-service";
 import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 

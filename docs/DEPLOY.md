@@ -6,12 +6,12 @@ company (name, regions, service areas, prices, taxes) is set in the app after de
 
 ## 1. Deploy (about 5 minutes)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle&project-name=cleaning-booking&repository-name=cleaning-booking&env=AUTH_SECRET%2CNEXT_PUBLIC_BRAND_NAME%2CNEXT_PUBLIC_COUNTRY&envDefaults=%7B%22NEXT_PUBLIC_COUNTRY%22%3A%22CA%22%7D&envDescription=AUTH_SECRET%3A%20a%20long%20random%20string%20%28openssl%20rand%20-base64%2032%29%3B%20it%20is%20also%20your%20one-time%20setup%20key.%20NEXT_PUBLIC_BRAND_NAME%3A%20your%20company%20name.%20NEXT_PUBLIC_COUNTRY%3A%20CA%20or%20US.&envLink=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle%2Fblob%2Fmain%2Fdocs%2FDEPLOY.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle&root-directory=apps%2Fweb&project-name=cleaning-booking&repository-name=cleaning-booking&env=AUTH_SECRET%2CNEXT_PUBLIC_BRAND_NAME%2CNEXT_PUBLIC_COUNTRY&envDefaults=%7B%22NEXT_PUBLIC_COUNTRY%22%3A%22CA%22%7D&envDescription=AUTH_SECRET%3A%20a%20long%20random%20string%20%28openssl%20rand%20-base64%2032%29%3B%20it%20is%20also%20your%20one-time%20setup%20key.%20NEXT_PUBLIC_BRAND_NAME%3A%20your%20company%20name.%20NEXT_PUBLIC_COUNTRY%3A%20CA%20or%20US.&envLink=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle%2Fblob%2Fmain%2Fdocs%2FDEPLOY.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%7D%5D)
 
 The button clones this repository into your GitHub account, creates a Vercel project, and
 provisions a **Neon Postgres** database and a **private Vercel Blob** store for job photos. Choose
 the database region **US East (us-east-1 / Washington, D.C.)**: the app's functions run in
-`iad1` (see `vercel.json`), and every page makes several database queries.
+`iad1` (see `apps/web/vercel.json`), and every page makes several database queries.
 
 It asks for three values:
 
@@ -87,7 +87,7 @@ Then add the company's domain under **Settings → Domains**. Links in emails us
 - **Country, currency, locale, timezone:** `NEXT_PUBLIC_COUNTRY`, plus optional `NEXT_PUBLIC_CURRENCY`,
   `NEXT_PUBLIC_LOCALE`, `NEXT_PUBLIC_TIMEZONE`. These are built into the site: change them only
   before launch, then redeploy.
-- **Migrations on deploy:** `scripts/deploy-db.mjs` runs `prisma migrate deploy` and the seed on
+- **Migrations on deploy:** `apps/web/scripts/deploy-db.mjs` runs `prisma migrate deploy` and the seed on
   **production** deployments only. Preview deployments skip it unless `MIGRATE_ON_PREVIEW=1`
   (use that only when each preview has its own Neon branch, so a pull request can never migrate
   the production database).

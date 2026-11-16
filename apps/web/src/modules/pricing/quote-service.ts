@@ -5,7 +5,7 @@ import { country } from "@/modules/shared/country";
 import { todayIn } from "@/modules/shared/dates";
 import { computeQuote } from "./engine";
 import { resolveRates } from "./resolve-rates";
-import type { QuoteRequest } from "./schemas";
+import type { QuoteRequest } from "@msb/shared/pricing";
 import { getTaxLines } from "./tax";
 import type { PromoInput, QuoteInput, QuoteResult } from "./types";
 

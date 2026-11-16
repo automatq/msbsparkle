@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { quoteRequestSchema } from "@/modules/pricing/schemas";
+import { quoteRequestSchema } from "./pricing";
 
 export const contactSchema = z.object({
   firstName: z.string().trim().min(1).max(60),

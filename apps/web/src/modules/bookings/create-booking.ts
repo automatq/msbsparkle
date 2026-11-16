@@ -12,7 +12,7 @@ import { materializeJobs } from "@/modules/scheduling/materialize";
 import { localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
 import { lookupGiftCard } from "@/modules/gift-cards/service";
 import { generateBookingNumber } from "./booking-number";
-import type { ConfirmBookingInput } from "./schemas";
+import type { ConfirmBookingInput } from "@msb/shared/bookings";
 
 export type CreateBookingError = {
   code:

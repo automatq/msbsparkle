@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,14 +11,14 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -40,9 +40,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-src/generated/
+apps/web/src/generated/
 
 # playwright
-/test-results/
-/playwright-report/
-/uploads/
+test-results/
+playwright-report/
+# local photo storage when Blob is not configured (anchored: src/app/api/uploads is code)
+apps/web/uploads/
+
+# expo / react native
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+apps/mobile/ios/
+apps/mobile/android/
