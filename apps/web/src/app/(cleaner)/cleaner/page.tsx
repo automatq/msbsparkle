@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/admin/ui";
-import { requireRole } from "@/modules/auth/session";
-import { cleanerForUser, cleanerJobs } from "@/modules/cleaner/queries";
+import { currentCleaner } from "@/modules/cleaner/current";
+import { listJobs } from "@/modules/cleaner/service";
 import {
   addLocalDays,
   dateColumnToLocalDate,
@@ -14,17 +14,11 @@ import { locale } from "@/modules/shared/country";
 export const dynamic = "force-dynamic";
 
 export default async function CleanerHome() {
-  const ctx = await requireRole("/login/phone", "CLEANER", "SUPER_ADMIN");
-  const cleaner = await cleanerForUser(ctx.userId);
-  if (!cleaner)
-    return (
-      <p className="text-sm text-destructive">
-        No cleaner profile is linked to this login. Ask your dispatcher.
-      </p>
-    );
-  const today = todayIn(cleaner.homeRegion.timezone);
-  const rows = await cleanerJobs(
-    cleaner.id,
+  const cleaner = await currentCleaner();
+  if (!cleaner) return null; // the layout explains why
+  const today = todayIn(cleaner.timezone);
+  const rows = await listJobs(
+    cleaner,
     localDateToDateColumn(addLocalDays(today, -1)),
     localDateToDateColumn(addLocalDays(today, 14)),
   );

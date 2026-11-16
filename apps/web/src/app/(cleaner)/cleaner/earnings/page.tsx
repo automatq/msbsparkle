@@ -1,37 +1,21 @@
 import Link from "next/link";
-import { requireRole } from "@/modules/auth/session";
-import { cleanerForUser } from "@/modules/cleaner/queries";
-import { prisma } from "@/modules/db/client";
-import { addLocalDays, dateColumnToLocalDate, todayIn } from "@/modules/shared/dates";
+import { currentCleaner } from "@/modules/cleaner/current";
+import { getEarnings } from "@/modules/cleaner/service";
+import { dateColumnToLocalDate } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
 
 export const dynamic = "force-dynamic";
 
 export default async function EarningsPage() {
-  const ctx = await requireRole("/login/phone", "CLEANER", "SUPER_ADMIN");
-  const cleaner = await cleanerForUser(ctx.userId);
+  const cleaner = await currentCleaner();
   if (!cleaner) return null;
-  const today = todayIn(cleaner.homeRegion.timezone);
-  const weekStart = addLocalDays(today, -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7));
-  const earnings = await prisma.cleanerEarning.findMany({
-    where: { cleanerId: cleaner.id },
-    include: { job: { include: { customer: true, service: true, booking: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-  });
-  // Bucket by when the job was completed (earning creation), not when it was scheduled.
-  const inRange = (from: string) =>
-    earnings.filter((e) => {
-      const d = dateColumnToLocalDate(e.createdAt);
-      return d >= from && d <= today;
-    });
-  const sum = (rows: typeof earnings) => rows.reduce((s, e) => s + e.totalCents, 0);
+  const { pay, weekCents, last30Cents, rows: earnings } = await getEarnings(cleaner);
   const basis =
-    cleaner.payType === "PERCENT_OF_JOB"
-      ? `${(cleaner.payPercentBps ?? 0) / 100}% of each job (pre-tax)`
-      : cleaner.payType === "HOURLY"
-        ? `${formatCents(cleaner.payRateCents ?? 0)}/hour on checked-in time`
-        : `${formatCents(cleaner.payRateCents ?? 0)} per job`;
+    pay.payType === "PERCENT_OF_JOB"
+      ? `${(pay.payPercentBps ?? 0) / 100}% of each job (pre-tax)`
+      : pay.payType === "HOURLY"
+        ? `${formatCents(pay.payRateCents ?? 0)}/hour on checked-in time`
+        : `${formatCents(pay.payRateCents ?? 0)} per job`;
   return (
     <div className="space-y-5">
       <div>
@@ -42,14 +26,12 @@ export default async function EarningsPage() {
         <div className="rounded-xl border p-3">
           <p className="text-xs text-muted-foreground">This week</p>
           <p className="text-2xl font-semibold" data-testid="earnings-week">
-            {formatCents(sum(inRange(weekStart)))}
+            {formatCents(weekCents)}
           </p>
         </div>
         <div className="rounded-xl border p-3">
           <p className="text-xs text-muted-foreground">Last 30 days</p>
-          <p className="text-2xl font-semibold">
-            {formatCents(sum(inRange(addLocalDays(today, -30))))}
-          </p>
+          <p className="text-2xl font-semibold">{formatCents(last30Cents)}</p>
         </div>
       </div>
       <ul className="space-y-2">

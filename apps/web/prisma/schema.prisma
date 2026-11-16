@@ -1148,10 +1148,13 @@ model JobPhoto {
   takenAt    DateTime  @default(now())
   lat        Float?
   lng        Float?
+  /// Client-generated id (mobile app) so a retried upload returns the stored photo.
+  clientId   String?
 
   job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
   cleaner Cleaner @relation(fields: [cleanerId], references: [id])
 
+  @@unique([jobId, clientId])
   @@index([jobId])
 }
 

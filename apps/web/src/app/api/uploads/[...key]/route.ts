@@ -10,7 +10,8 @@ const NOT_FOUND = () => new Response("Not found", { status: 404 });
 
 /**
  * Serves stored job photos to people allowed to see the job: admins with access to its region,
- * cleaners assigned to it, and the customer who owns it. Everyone else gets a 404.
+ * cleaners who accepted it, and the customer who owns it. Everyone else (including cleaners who
+ * were only offered the job, declined it or were removed) gets a 404.
  */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/uploads/[...key]">) {
   const { key: parts } = await ctx.params;
@@ -26,7 +27,10 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/uploads/[..
           organizationId: true,
           regionId: true,
           customer: { select: { userId: true } },
-          assignments: { select: { cleaner: { select: { userId: true } } } },
+          assignments: {
+            where: { status: "ACCEPTED" },
+            select: { cleaner: { select: { userId: true } } },
+          },
         },
       },
     },

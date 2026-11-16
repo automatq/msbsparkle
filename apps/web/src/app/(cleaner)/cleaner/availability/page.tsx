@@ -1,31 +1,18 @@
 import { AvailabilityForm } from "@/components/cleaner/availability-form";
-import { requireRole } from "@/modules/auth/session";
-import { cleanerForUser } from "@/modules/cleaner/queries";
-import { prisma } from "@/modules/db/client";
+import { currentCleaner } from "@/modules/cleaner/current";
+import { getAvailability } from "@/modules/cleaner/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function AvailabilityPage() {
-  const ctx = await requireRole("/login/phone", "CLEANER", "SUPER_ADMIN");
-  const cleaner = await cleanerForUser(ctx.userId);
+  const cleaner = await currentCleaner();
   if (!cleaner) return null;
-  const [availability, timeOff] = await Promise.all([
-    prisma.cleanerAvailability.findMany({
-      where: { cleanerId: cleaner.id },
-      orderBy: { weekday: "asc" },
-    }),
-    prisma.timeOff.findMany({
-      where: { cleanerId: cleaner.id, endsAt: { gte: new Date() } },
-      orderBy: { startsAt: "asc" },
-    }),
-  ]);
+  const { timezone, availability, timeOff } = await getAvailability(cleaner);
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Availability</h1>
-        <p className="text-xs text-muted-foreground">
-          Times are in {cleaner.homeRegion.timezone.replace("_", " ")}.
-        </p>
+        <p className="text-xs text-muted-foreground">Times are in {timezone.replace("_", " ")}.</p>
       </div>
       <AvailabilityForm
         initial={availability.map((a) => ({

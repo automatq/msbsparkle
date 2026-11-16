@@ -8,35 +8,19 @@ import {
   PhotoUpload,
   ProgressButtons,
 } from "@/components/cleaner/job-actions";
-import { requireRole } from "@/modules/auth/session";
-import { cleanerForUser } from "@/modules/cleaner/queries";
-import { prisma } from "@/modules/db/client";
+import { currentCleaner } from "@/modules/cleaner/current";
+import { getJobDetail } from "@/modules/cleaner/service";
 import { formatInZone } from "@/modules/shared/dates";
 
 export const dynamic = "force-dynamic";
 
 export default async function CleanerJobPage({ params }: PageProps<"/cleaner/jobs/[id]">) {
-  const ctx = await requireRole("/login/phone", "CLEANER", "SUPER_ADMIN");
-  const cleaner = await cleanerForUser(ctx.userId);
+  const cleaner = await currentCleaner();
   if (!cleaner) notFound();
   const { id } = await params;
-  const a = await prisma.assignment.findUnique({
-    where: { jobId_cleanerId: { jobId: id, cleanerId: cleaner.id } },
-    include: {
-      job: {
-        include: {
-          customer: true,
-          service: true,
-          booking: true,
-          checklist: { orderBy: { sortOrder: "asc" } },
-          photos: { orderBy: { takenAt: "asc" } },
-          assignments: { where: { status: "ACCEPTED" }, include: { cleaner: true } },
-        },
-      },
-    },
-  });
-  if (!a || !["OFFERED", "ACCEPTED"].includes(a.status)) notFound();
-  const job = a.job;
+  const detail = await getJobDetail(cleaner, id);
+  if (!detail) notFound();
+  const { assignment: a, job, can } = detail;
   const addr = job.addressSnapshot as {
     line1: string;
     line2?: string | null;
@@ -47,10 +31,9 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
   };
   const mapsQ = encodeURIComponent(`${addr.line1}, ${addr.city} ${addr.postalCode}`);
   const extras = job.extras as { slug: string; qty: number }[];
-  const teammates = job.assignments.filter((x) => x.cleanerId !== cleaner.id);
-  const active =
-    a.status === "ACCEPTED" &&
-    !["COMPLETED", "CANCELLED", "SKIPPED", "NO_SHOW"].includes(job.status);
+  const teammates = job.assignments.filter((x) => x.cleanerId !== cleaner.cleanerId);
+  // Same rules the server enforces: buttons only appear when the action would be accepted.
+  const active = can.isOpen;
 
   return (
     <div className="space-y-5">
@@ -73,11 +56,11 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
         </div>
       </div>
 
-      {a.status === "OFFERED" ? <OfferButtons jobId={job.id} /> : null}
+      {can.canRespond ? <OfferButtons jobId={job.id} /> : null}
       {active ? (
         <ProgressButtons
           jobId={job.id}
-          status={job.status}
+          canGoEnRoute={can.canGoEnRoute}
           checkedIn={!!a.checkInAt}
           checkedOut={!!a.checkOutAt}
         />
@@ -129,7 +112,7 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
             {job.internalNotes}
           </p>
         ) : null}
-        {a.status === "ACCEPTED" ? (
+        {can.canSeeCustomer ? (
           <p className="mt-2 text-xs text-muted-foreground">
             {job.customer.firstName} {job.customer.lastName} ·{" "}
             <a href={`tel:${job.customer.phone}`} className="underline">
@@ -163,7 +146,7 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
           <h2 className="mb-2 font-medium">Checklist</h2>
           <Checklist
             jobId={job.id}
-            editable={active && !!a.checkInAt && !a.checkOutAt}
+            editable={can.canEditChecklist}
             items={job.checklist.map((i) => ({
               id: i.id,
               section: i.section,
@@ -175,7 +158,7 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
         </section>
       ) : null}
 
-      {a.status === "ACCEPTED" ? (
+      {can.canSeePhotos ? (
         <section className="rounded-xl border p-3">
           <h2 className="mb-2 font-medium">Photos</h2>
           {job.photos.length ? (
@@ -195,7 +178,7 @@ export default async function CleanerJobPage({ params }: PageProps<"/cleaner/job
               ))}
             </div>
           ) : null}
-          {active && !a.checkOutAt ? (
+          {can.canAddPhotos ? (
             <div className="grid grid-cols-3 gap-2">
               <PhotoUpload jobId={job.id} kind="BEFORE" />
               <PhotoUpload jobId={job.id} kind="AFTER" />
