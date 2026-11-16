@@ -14,6 +14,7 @@ import {
 import { JPEG, cleanerFixtures } from "@/modules/cleaner/test-fixtures";
 import { prisma } from "@/modules/db/client";
 import * as availability from "./availability/route";
+import * as devices from "./devices/route";
 import * as earnings from "./earnings/route";
 import * as logout from "./auth/logout/route";
 import * as me from "./me/route";
@@ -262,6 +263,27 @@ describe.skipIf(!enabled)("mobile API (integration)", () => {
       );
       const read = await call<{ rows: typeof rows }>(availability.GET, { token });
       expect(read.body).toMatchObject({ ok: true, data: { rows } });
+    });
+
+    it("registers and unregisters a push token for the session", async () => {
+      const c = await fx.makeCleaner();
+      const t = await signIn(c.userId!);
+      const token = t.accessToken;
+      const expoPushToken = `ExponentPushToken[${c.id}]`;
+      expect(
+        (await call(devices.POST, { token, body: { expoPushToken: "not-a-token" } })).status,
+      ).toBe(400);
+      expect(
+        (await call(devices.POST, { token, body: { expoPushToken, platform: "ios" } })).status,
+      ).toBe(200);
+      const row = await prisma.pushDevice.findUniqueOrThrow({ where: { expoPushToken } });
+      expect(row).toMatchObject({ userId: c.userId, disabledAt: null });
+      expect(
+        (await call(devices.DELETE, { token, method: "DELETE", body: { expoPushToken } })).status,
+      ).toBe(200);
+      expect(
+        (await prisma.pushDevice.findUniqueOrThrow({ where: { expoPushToken } })).disabledAt,
+      ).not.toBeNull();
     });
 
     it("logout ends the session", async () => {

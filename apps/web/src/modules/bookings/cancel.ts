@@ -1,6 +1,7 @@
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
+import { emit } from "@/modules/jobs/client";
 import { bpsOf } from "@/modules/shared/money";
 
 export function lateCancelFeeCents(
@@ -31,7 +32,15 @@ export async function cancelJob(
 ) {
   const job = await prisma.job.findUniqueOrThrow({
     where: { id: jobId },
-    include: { region: true, activeQuote: true, booking: true },
+    include: {
+      region: true,
+      activeQuote: true,
+      booking: true,
+      assignments: {
+        where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+        select: { cleanerId: true },
+      },
+    },
   });
   const late = isLateCancel(job, job.region);
   const chargeFee =
@@ -72,6 +81,13 @@ export async function cancelJob(
         },
       });
   });
+  if (job.assignments.length)
+    await emit("job/cleaner-changed", {
+      jobId,
+      cleanerIds: job.assignments.map((a) => a.cleanerId),
+      change: "cancelled",
+      nonce: "cancel",
+    });
   return { late, feeCents };
 }
 
@@ -97,6 +113,7 @@ export async function cancelBooking(bookingId: string, actor: Actor, reason?: st
 }
 
 export async function pauseBooking(bookingId: string, from: Date, until: Date, actor: Actor) {
+  const affected: { jobId: string; cleanerIds: string[] }[] = [];
   await prisma.$transaction(async (tx) => {
     await tx.booking.update({
       where: { id: bookingId },
@@ -108,8 +125,16 @@ export async function pauseBooking(bookingId: string, from: Date, until: Date, a
         status: { in: ["PENDING", "CONFIRMED", "ASSIGNED"] },
         scheduledDate: { gte: from, lte: until },
       },
+      include: {
+        assignments: {
+          where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+          select: { cleanerId: true },
+        },
+      },
     });
     for (const j of jobs) {
+      if (j.assignments.length)
+        affected.push({ jobId: j.id, cleanerIds: j.assignments.map((a) => a.cleanerId) });
       await transitionJob(tx, j.id, "SKIPPED", actor, { reason: "booking paused" });
       await tx.assignment.updateMany({
         where: { jobId: j.id, status: { in: ["OFFERED", "ACCEPTED"] } },
@@ -117,6 +142,8 @@ export async function pauseBooking(bookingId: string, from: Date, until: Date, a
       });
     }
   });
+  for (const a of affected)
+    await emit("job/cleaner-changed", { ...a, change: "cancelled", nonce: "cancel" });
 }
 
 export async function resumeBooking(bookingId: string) {

@@ -688,6 +688,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   mobileSessions MobileSession[]
+  pushDevices    PushDevice[]
   customer       Customer?
   cleaner        Cleaner?
 
@@ -766,9 +767,30 @@ model MobileSession {
   revokedAt           DateTime?
   revokedReason       String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushDevices PushDevice[]
 
   @@index([userId])
+}
+
+/// An Expo push token registered by a signed-in app. Only devices whose session is still active
+/// receive pushes; Expo's DeviceNotRegistered disables the token.
+model PushDevice {
+  id              String    @id @default(cuid())
+  userId          String
+  mobileSessionId String
+  expoPushToken   String    @unique
+  platform        String
+  createdAt       DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  disabledAt      DateTime?
+  disabledReason  String?
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mobileSession MobileSession @relation(fields: [mobileSessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([mobileSessionId])
 }
 
 model Customer {

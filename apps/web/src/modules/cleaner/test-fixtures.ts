@@ -4,7 +4,13 @@
  */
 import { prisma } from "@/modules/db/client";
 import { deleteObject } from "@/modules/storage";
-import { localDateToDateColumn, todayIn, weekdayOf, zonedToInstant } from "@/modules/shared/dates";
+import {
+  addLocalDays,
+  localDateToDateColumn,
+  todayIn,
+  weekdayOf,
+  zonedToInstant,
+} from "@/modules/shared/dates";
 import { resolveCleanerActor, type CleanerActor } from "./service";
 
 /** Smallest buffer that passes the JPEG magic-byte check. */
@@ -51,7 +57,11 @@ export function cleanerFixtures(tag: string, phoneBlock: number) {
   }
 
   /** A confirmed job today with a single required checklist item, offered or assigned to a cleaner. */
-  async function makeJob(cleanerId: string, assignment: "OFFERED" | "ACCEPTED") {
+  async function makeJob(
+    cleanerId: string,
+    assignment: "OFFERED" | "ACCEPTED",
+    opts: { daysAhead?: number } = {},
+  ) {
     const r = await region();
     const service = await prisma.service.findFirstOrThrow({
       where: { organizationId: r.organizationId, slug: "standard" },
@@ -80,7 +90,7 @@ export function cleanerFixtures(tag: string, phoneBlock: number) {
       },
     });
     const window = r.windows[0];
-    const date = todayIn(r.timezone);
+    const date = addLocalDays(todayIn(r.timezone), opts.daysAhead ?? 0);
     const booking = await prisma.booking.create({
       data: {
         organizationId: r.organizationId,
@@ -145,6 +155,14 @@ export function cleanerFixtures(tag: string, phoneBlock: number) {
       select: { id: true },
     });
     const jobIds = jobs.map((j) => j.id);
+    await prisma.notification.deleteMany({
+      where: {
+        OR: [
+          { jobId: { in: jobIds } },
+          { recipientId: { in: [...created.cleaners, ...created.customers] } },
+        ],
+      },
+    });
     await prisma.cleanerEarning.deleteMany({ where: { jobId: { in: jobIds } } });
     await prisma.jobEvent.deleteMany({ where: { jobId: { in: jobIds } } });
     const photos = await prisma.jobPhoto.findMany({ where: { jobId: { in: jobIds } } });

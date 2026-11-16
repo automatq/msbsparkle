@@ -8,6 +8,7 @@ import { sendReviewRequest } from "@/modules/jobs/tasks/notify";
 import { runReminders } from "@/modules/jobs/tasks/reminders";
 import { runSeriesMaterialization } from "@/modules/jobs/tasks/series";
 import { runRetention } from "@/modules/jobs/tasks/retention";
+import { runPushReceipts } from "@/modules/notifications/push";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,8 @@ export async function POST(req: Request) {
       return NextResponse.json(await runPaymentRetries(now));
     case "retention":
       return NextResponse.json(await runRetention(now));
+    case "push-receipts":
+      return NextResponse.json(await runPushReceipts(now));
     case "digest":
       return NextResponse.json(await runAdminDigest(now));
     case "charge":
@@ -63,6 +66,7 @@ export async function POST(req: Request) {
             "retries",
             "digest",
             "retention",
+            "push-receipts",
             "charge",
             "review",
           ],

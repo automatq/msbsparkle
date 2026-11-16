@@ -4,6 +4,16 @@ export type Events = {
   "booking/confirmed": { data: { bookingId: string } };
   "job/assigned": { data: { jobId: string; cleanerId: string; offered: boolean } };
   "job/completed": { data: { jobId: string } };
+  /** A job an assigned/offered cleaner had was cancelled, rescheduled, or they were removed. */
+  "job/cleaner-changed": {
+    data: {
+      jobId: string;
+      cleanerIds: string[];
+      change: "cancelled" | "rescheduled" | "removed";
+      nonce: string;
+      previousStartAt?: string | null;
+    };
+  };
 };
 
 export const inngest = new Inngest({ id: "msbsparkle" });

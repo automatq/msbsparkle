@@ -1,9 +1,11 @@
-import { inngest } from "./client";
+import { inngest, type Events } from "./client";
+import { runPushReceipts } from "@/modules/notifications/push";
 import { chargeCompletedJob, runPaymentRetries } from "./tasks/charges";
 import { runCutoff } from "./tasks/cutoff";
 import { runAdminDigest } from "./tasks/digest";
 import {
   notifyCleanerAssigned,
+  notifyCleanerJobChanged,
   sendBookingConfirmationSms,
   sendReviewRequest,
 } from "./tasks/notify";
@@ -28,6 +30,20 @@ export const onJobAssigned = inngest.createFunction(
   async ({ event, step }) => {
     const d = event.data as { jobId: string; cleanerId: string; offered: boolean };
     await step.run("notify-cleaner", () => notifyCleanerAssigned(d.jobId, d.cleanerId, d.offered));
+  },
+);
+
+export const onCleanerJobChanged = inngest.createFunction(
+  { id: "job-cleaner-changed", triggers: [{ event: "job/cleaner-changed" }] },
+  async ({ event, step }) => {
+    const d = event.data as Events["job/cleaner-changed"]["data"];
+    for (const cleanerId of d.cleanerIds)
+      await step.run(`notify-${cleanerId}`, () =>
+        notifyCleanerJobChanged(d.jobId, cleanerId, d.change, {
+          nonce: d.nonce,
+          previousStartAt: d.previousStartAt,
+        }),
+      );
   },
 );
 
@@ -63,6 +79,11 @@ export const adminDigest = inngest.createFunction(
   async ({ step }) => step.run("digest", () => runAdminDigest()),
 );
 
+export const pushReceipts = inngest.createFunction(
+  { id: "push-receipts", triggers: [{ cron: "*/30 * * * *" }] },
+  async ({ step }) => step.run("check", () => runPushReceipts()),
+);
+
 export const retention = inngest.createFunction(
   { id: "retention", triggers: [{ cron: "30 4 * * *" }] },
   async ({ step }) => step.run("purge", () => runRetention()),
@@ -71,6 +92,7 @@ export const retention = inngest.createFunction(
 export const functions = [
   onBookingConfirmed,
   onJobAssigned,
+  onCleanerJobChanged,
   onJobCompleted,
   reminders,
   cutoff,
@@ -78,4 +100,5 @@ export const functions = [
   materializeSeries,
   adminDigest,
   retention,
+  pushReceipts,
 ];
