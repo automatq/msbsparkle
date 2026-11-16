@@ -1,9 +1,14 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { postWebhook } from "./deliver";
 import { isBlockedAddress, validateWebhookUrl } from "./safe-url";
 
+// Strict by default, even where the environment (CI) enables private targets for e2e.
+beforeEach(() => {
+  vi.stubEnv("WEBHOOKS_ALLOW_PRIVATE", "");
+  vi.stubEnv("VERCEL_ENV", "");
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe("isBlockedAddress", () => {
