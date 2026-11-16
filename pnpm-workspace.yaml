@@ -8,3 +8,9 @@ allowBuilds:
   "@prisma/client": true
   "@node-rs/argon2": true
   protobufjs: false
+overrides:
+  # Security: rimraf@5 pulls vulnerable glob@10 (GHSA via pnpm audit); gaxios never imports rimraf at runtime.
+  "gaxios>rimraf": ^6.1.4
+  # Security: minimatch <11.0.1 ReDoS; ts-morph only uses the minimatch() named export, unchanged in v11.
+  "@ts-morph/common>minimatch": ^11.0.8
+  "@typescript-eslint/typescript-estree>minimatch": ^11.0.8
