@@ -31,6 +31,15 @@ export async function rateLimit(
   return { allowed: count <= limit, remaining: Math.max(0, limit - count), retryAfterSeconds };
 }
 
+/** Per-IP throttle for public, unauthenticated actions (forms, checkout). */
+export async function allowIp(
+  scope: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  return (await rateLimit(scope, await clientIp(), limit, windowSeconds)).allowed;
+}
+
 /** Records one failed attempt (e.g. a wrong password) without checking. */
 export async function recordFailure(
   scope: string,
@@ -41,10 +50,21 @@ export async function recordFailure(
   await rateLimit(scope, subject, Number.MAX_SAFE_INTEGER, windowSeconds, now);
 }
 
+/**
+ * The caller's IP for rate limiting. Never trusts the client-controlled left end of
+ * X-Forwarded-For: on Vercel the platform sets x-vercel-forwarded-for / x-real-ip itself;
+ * elsewhere the right-most X-Forwarded-For entry is the one added by our own proxy.
+ */
 export async function clientIp(): Promise<string> {
-  const h = await headers();
-  const xf = h.get("x-forwarded-for");
-  return (xf ? xf.split(",")[0] : h.get("x-real-ip")) ?? "unknown";
+  return pickClientIp(await headers(), !!process.env.VERCEL);
+}
+
+export function pickClientIp(h: Pick<Headers, "get">, onVercel: boolean): string {
+  const first = (v: string | null) => v?.split(",")[0]?.trim() || null;
+  const last = (v: string | null) => v?.split(",").at(-1)?.trim() || null;
+  if (onVercel)
+    return first(h.get("x-vercel-forwarded-for")) ?? first(h.get("x-real-ip")) ?? "unknown";
+  return first(h.get("x-real-ip")) ?? last(h.get("x-forwarded-for")) ?? "unknown";
 }
 
 export class RateLimitedError extends Error {

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "@/modules/auth/config";
-import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
@@ -16,11 +15,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     const email = String(formData.get("email") ?? "")
       .trim()
       .toLowerCase();
-    const [byEmail, byIp] = await Promise.all([
-      rateLimit("magic:email", email, 5, 15 * 60),
-      rateLimit("magic:ip", await clientIp(), 30, 60 * 60),
-    ]);
-    if (!byEmail.allowed || !byIp.allowed) redirect("/login?error=RateLimited");
+    // Rate limited inside the email provider (modules/auth/limits), whichever way sign-in is reached.
     const provider = process.env.RESEND_API_KEY ? "resend" : "nodemailer";
     await signIn(provider, { email, redirectTo: callbackUrl });
     redirect("/verify");

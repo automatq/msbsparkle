@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { compressImage } from "@/components/cleaner/compress-image";
 import {
   checkInAction,
   checkOutAction,
@@ -195,16 +196,18 @@ export function PhotoUpload({
       <input
         ref={ref}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         capture="environment"
         className="hidden"
         disabled={pending}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          const fd = new FormData();
-          fd.set("file", f);
-          run(() => uploadPhotoAction(jobId, kind, fd));
+          run(async () => {
+            const fd = new FormData();
+            fd.set("file", await compressImage(f));
+            return uploadPhotoAction(jobId, kind, fd);
+          });
           if (ref.current) ref.current.value = "";
         }}
         data-testid={`photo-${kind}`}

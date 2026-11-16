@@ -15,7 +15,7 @@ import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/mo
 import { hasRole } from "@/modules/auth/roles";
 import { getOptionalCtx } from "@/modules/auth/session";
 import { emit } from "@/modules/jobs/client";
-import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
+import { allowIp, clientIp, rateLimit } from "@/modules/shared/rate-limit";
 import { createBooking } from "./create-booking";
 import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
 
@@ -98,6 +98,14 @@ export async function prepareCheckoutAction(
 > {
   const contact = contactSchema.safeParse(contactRaw);
   if (!contact.success) return { ok: false, message: "Please check your contact details." };
+  if (staffOrder) {
+    const ctx = await getOptionalCtx();
+    if (!ctx || !hasRole(ctx.roles, "SUPER_ADMIN", "REGION_ADMIN"))
+      return { ok: false, message: "Staff login required for phone orders." };
+  } else if (!(await allowIp("checkout:ip", 30, 60 * 60))) {
+    // Each call can create a Stripe customer and SetupIntent.
+    return { ok: false, message: "Too many attempts. Please try again later." };
+  }
   const region = await prisma.region.findUniqueOrThrow({
     where: { id: regionId },
     select: { organizationId: true },
@@ -131,6 +139,12 @@ export async function confirmBookingAction(
     const ctx = await getOptionalCtx();
     if (!ctx || !hasRole(ctx.roles, "SUPER_ADMIN", "REGION_ADMIN"))
       return { ok: false, code: "FORBIDDEN", message: "Staff login required for phone orders." };
+  } else if (!(await allowIp("booking:ip", 30, 60 * 60))) {
+    return {
+      ok: false,
+      code: "RATE_LIMITED",
+      message: "Too many attempts. Please try again later.",
+    };
   }
   const result = await createBooking(parsed.data);
   if (!result.ok) return { ok: false, code: result.error.code, message: result.error.message };
@@ -151,6 +165,7 @@ const areaRequestSchema = z.object({
 export async function areaRequestAction(raw: unknown): Promise<{ ok: boolean }> {
   const parsed = areaRequestSchema.safeParse(raw);
   if (!parsed.success) return { ok: false };
+  if (!(await allowIp("area-request:ip", 10, 60 * 60))) return { ok: false };
   const postal = normalizePostal(parsed.data.postalCode);
   if (!postal) return { ok: false };
   const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });

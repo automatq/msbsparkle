@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { JobStatus } from "@/generated/prisma/enums";
-import { assertRegionAccess, getCtx, type Ctx } from "@/modules/auth/session";
+import { ForbiddenError, assertRegionAccess, getCtx, type Ctx } from "@/modules/auth/session";
 import { cancelBooking, cancelJob, pauseBooking, resumeBooking } from "@/modules/bookings/cancel";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
@@ -29,6 +29,14 @@ function actorOf(ctx: Ctx): Actor {
 async function jobRegionId(jobId: string): Promise<string> {
   return (await prisma.job.findUniqueOrThrow({ where: { id: jobId }, select: { regionId: true } }))
     .regionId;
+}
+/** Region admins may only touch customers who have booked in one of their regions. */
+async function assertCustomerAccess(ctx: Ctx, customerId: string): Promise<void> {
+  if (ctx.isSuperAdmin) return;
+  const inRegion = await prisma.booking.count({
+    where: { customerId, regionId: { in: ctx.regionIds } },
+  });
+  if (!inRegion) throw new ForbiddenError("No access to this customer");
 }
 function fail(e: unknown): ActionResult {
   return { ok: false, message: e instanceof Error ? e.message : "Something went wrong" };
@@ -309,7 +317,9 @@ export async function refundAction(
       where: { id: chargeId },
       include: { job: { select: { regionId: true } } },
     });
+    // Charges outside a region (e.g. gift card purchases) are refundable by super admins only.
     if (charge.job) assertRegionAccess(ctx, charge.job.regionId);
+    else if (!ctx.isSuperAdmin) throw new ForbiddenError("Only a super admin can refund this.");
     const res = await refundCharge(chargeId, amountCents, reason, note || null, actorOf(ctx));
     if (charge.jobId) revalidateJob(charge.jobId);
     revalidatePath("/admin/payments");
@@ -466,7 +476,8 @@ export async function updateCustomerNotesAction(
   notes: string,
 ): Promise<ActionResult> {
   try {
-    await adminCtx();
+    const ctx = await adminCtx();
+    await assertCustomerAccess(ctx, customerId);
     await prisma.customer.update({
       where: { id: customerId },
       data: { notes: notes.trim() || null },
