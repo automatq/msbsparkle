@@ -7,6 +7,7 @@ import { customerForCtx } from "@/modules/customer/queries";
 import { prisma } from "@/modules/db/client";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { formatCents } from "@/modules/shared/money";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function PaymentPage() {
           {charges.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-2 p-3">
               <span>
-                {c.createdAt.toLocaleDateString("en-CA")} ·{" "}
+                {c.createdAt.toLocaleDateString(locale)} ·{" "}
                 {c.type === "SERVICE"
                   ? (c.job?.booking.service.name ?? "Cleaning")
                   : c.type.replaceAll("_", " ").toLowerCase()}

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function ApplicationsPage() {
         <TableBody>
           {apps.map((a) => (
             <TableRow key={a.id}>
-              <TableCell>{a.createdAt.toLocaleDateString("en-CA")}</TableCell>
+              <TableCell>{a.createdAt.toLocaleDateString(locale)}</TableCell>
               <TableCell className="font-medium">
                 {a.firstName} {a.lastName}
               </TableCell>

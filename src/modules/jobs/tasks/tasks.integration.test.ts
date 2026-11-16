@@ -47,7 +47,7 @@ async function seedBooking(opts: { startInHours: number; frequency?: "ONE_TIME" 
       city: "Toronto",
       province: "ON",
       postalCode: "M5V 2T6",
-      fsa: "M5V",
+      postalPrefix: "M5V",
     },
   });
   const window = region.windows[0];

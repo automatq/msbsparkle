@@ -6,6 +6,7 @@ import { loadCalendarData } from "@/modules/admin/calendar-data";
 import { pickRegionForDate } from "@/modules/admin/regions";
 import { requireRole } from "@/modules/auth/session";
 import { addLocalDays, localDateToDateColumn, todayIn } from "@/modules/shared/dates";
+import { locale, timezone } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +18,14 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   const { regions, region } = await pickRegionForDate(
     ctx,
     typeof params.region === "string" ? params.region : null,
-    localDateToDateColumn(requestedDate ?? todayIn("America/Toronto")),
+    localDateToDateColumn(requestedDate ?? todayIn(timezone)),
   );
   if (!region) return <p>No regions available.</p>;
   const today = todayIn(region.timezone);
   const date = requestedDate ?? today;
   const { resources, events } = await loadCalendarData(region.id, date);
   const href = (d: string, r = region.id) => `/admin/calendar?region=${r}&date=${d}`;
-  const label = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-CA", {
+  const label = new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",

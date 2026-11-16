@@ -23,6 +23,7 @@ import { checkGiftCardAction } from "@/modules/gift-cards/actions";
 import { formatCents } from "@/modules/shared/money";
 import { CardStep } from "./card-step";
 import { QuoteSummary } from "./quote-summary";
+import { country, locale, subdivisionName } from "@/modules/shared/country";
 
 export type ServiceOption = {
   id: string;
@@ -81,7 +82,7 @@ export function BookingWizard({
   const [step, setStep] = useState<Step>("Location");
   const [postal, setPostal] = useState(initial?.postalCode ?? "");
   const [region, setRegion] = useState<Region | null>(null);
-  const [outOfArea, setOutOfArea] = useState<{ fsa: string } | null>(null);
+  const [outOfArea, setOutOfArea] = useState<{ area: string } | null>(null);
   const [serviceSlug, setServiceSlug] = useState(initial?.serviceSlug ?? "standard");
   const [bedrooms, setBedrooms] = useState(initial?.bedrooms ?? 2);
   const [bathrooms, setBathrooms] = useState(initial?.bathrooms ?? 1);
@@ -210,9 +211,9 @@ export function BookingWizard({
       }));
       go("Service");
     } else if (res.code === "OUT_OF_AREA") {
-      setOutOfArea({ fsa: res.fsa ?? "" });
+      setOutOfArea({ area: res.area ?? "" });
     } else {
-      toast.error("Please enter a valid Canadian postal code.");
+      toast.error(`Please enter a valid ${country.postalLabel.toLowerCase()}.`);
     }
   }
 
@@ -295,18 +296,18 @@ export function BookingWizard({
           <form onSubmit={submitPostal} className="space-y-4">
             <h1 className="text-2xl font-semibold">Where do you need cleaning?</h1>
             <div className="space-y-2">
-              <Label htmlFor="postal">Postal code</Label>
+              <Label htmlFor="postal">{country.postalLabel}</Label>
               <Input
                 id="postal"
                 value={postal}
                 onChange={(e) => setPostal(e.target.value)}
-                placeholder="M5V 2T6"
+                placeholder={country.postalPlaceholder}
                 required
                 autoFocus
                 className="max-w-xs uppercase"
               />
             </div>
-            {outOfArea ? <OutOfArea fsa={outOfArea.fsa} postal={postal} /> : null}
+            {outOfArea ? <OutOfArea area={outOfArea.area} postal={postal} /> : null}
             <Button type="submit" disabled={busy}>
               {busy ? "Checking…" : "Continue"}
             </Button>
@@ -651,7 +652,7 @@ export function BookingWizard({
                 autoComplete="address-level2"
               />
               <Field
-                label="Postal code"
+                label={country.postalLabel}
                 id="postalCode"
                 value={address.postalCode}
                 onChange={(v) => setAddress({ ...address, postalCode: v.toUpperCase() })}
@@ -754,7 +755,7 @@ export function BookingWizard({
         />
         {region ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Prices include tax for {region.province}.{" "}
+            Prices include tax for {subdivisionName(region.province)}.{" "}
             {region.phone ? `Questions? ${region.phone}` : ""}
           </p>
         ) : null}
@@ -763,12 +764,12 @@ export function BookingWizard({
   );
 }
 
-function OutOfArea({ fsa, postal }: { fsa: string; postal: string }) {
+function OutOfArea({ area, postal }: { area: string; postal: string }) {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   return (
     <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
-      <p className="font-medium">We&apos;re not in {fsa} yet.</p>
+      <p className="font-medium">We&apos;re not in {area} yet.</p>
       {done ? (
         <p className="mt-1 text-muted-foreground">
           Thanks, we&apos;ll let you know when we launch near you.
@@ -937,7 +938,7 @@ function Field({
 
 function formatDay(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-CA", {
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",

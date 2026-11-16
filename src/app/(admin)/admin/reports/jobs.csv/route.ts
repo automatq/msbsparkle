@@ -7,6 +7,7 @@ import {
   localDateToDateColumn,
   todayIn,
 } from "@/modules/shared/dates";
+import { timezone } from "@/modules/shared/country";
 
 function csv(v: unknown): string {
   const s = v == null ? "" : String(v);
@@ -15,7 +16,7 @@ function csv(v: unknown): string {
 
 export async function GET() {
   const ctx = await getCtx("SUPER_ADMIN", "REGION_ADMIN");
-  const today = todayIn("America/Toronto");
+  const today = todayIn(timezone);
   const jobs = await prisma.job.findMany({
     where: {
       ...regionWhere(ctx),

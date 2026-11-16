@@ -4,6 +4,7 @@ import { sendEmail } from "@/modules/notifications/email";
 import { appUrl, brand } from "@/modules/notifications/send";
 import { getStripe } from "@/modules/payments/stripe";
 import { formatCents } from "@/modules/shared/money";
+import { currency } from "@/modules/shared/country";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function code(): string {
@@ -84,7 +85,7 @@ export async function startGiftCardPurchase(
       {
         quantity: 1,
         price_data: {
-          currency: "cad",
+          currency: currency.toLowerCase(),
           unit_amount: p.amountCents,
           product_data: { name: `${brand()} gift card` },
         },

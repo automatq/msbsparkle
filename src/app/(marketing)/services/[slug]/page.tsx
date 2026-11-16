@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { prisma } from "@/modules/db/client";
 import { SERVICE_COPY, jsonLd } from "@/modules/marketing/content";
+import { currency } from "@/modules/shared/country";
 
 export const revalidate = 3600;
 
@@ -39,7 +40,11 @@ export default async function ServicePage({ params }: PageProps<"/services/[slug
     description: s.description,
     provider: { "@type": "Organization", name: brand },
     areaServed: "CA",
-    offers: { "@type": "Offer", priceCurrency: "CAD", availability: "https://schema.org/InStock" },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: currency,
+      availability: "https://schema.org/InStock",
+    },
   };
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">

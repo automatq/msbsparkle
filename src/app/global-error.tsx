@@ -1,9 +1,11 @@
 "use client";
 
+import { locale } from "@/modules/shared/country";
+
 /** Last-resort boundary when the root layout itself fails; renders its own document. */
 export default function GlobalError({ retry }: { error: unknown; retry: () => void }) {
   return (
-    <html lang="en-CA">
+    <html lang={locale}>
       <body
         style={{
           fontFamily: "system-ui, sans-serif",

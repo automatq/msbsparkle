@@ -24,6 +24,7 @@ import {
   zonedToInstant,
 } from "@/modules/shared/dates";
 import { customerForCtx, ownedBooking, ownedJob } from "./queries";
+import { currency } from "@/modules/shared/country";
 
 export type CustomerActionResult =
   { ok: true; message?: string; warnings?: string[] } | { ok: false; message: string };
@@ -306,7 +307,7 @@ async function collectTipNow(jobId: string) {
     const pi = await stripe.paymentIntents.create(
       {
         amount: charge.cardCents,
-        currency: "cad",
+        currency: currency.toLowerCase(),
         customer: charge.customer.stripeCustomerId,
         payment_method: charge.paymentMethod.stripePaymentMethodId,
         off_session: true,

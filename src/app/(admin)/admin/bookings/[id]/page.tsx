@@ -15,6 +15,7 @@ import { assertRegionAccess, requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { dateColumnToLocalDate } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ export default async function BookingPage({ params }: PageProps<"/admin/bookings
         </h1>
         <p className="text-sm text-muted-foreground">
           {b.service.name} · {b.frequency.replaceAll("_", " ").toLowerCase()} · {b.window.label} ·{" "}
-          {b.region.name} · created {b.createdAt.toLocaleDateString("en-CA")} via{" "}
+          {b.region.name} · created {b.createdAt.toLocaleDateString(locale)} via{" "}
           {b.source.toLowerCase()}
         </p>
       </div>

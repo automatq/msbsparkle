@@ -5,7 +5,8 @@ import { canActAsCustomer } from "@/modules/payments/customers";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { recomputeQuote } from "@/modules/pricing/quote-service";
 import type { QuoteInput } from "@/modules/pricing/types";
-import { normalizePostal } from "@/modules/regions/lookup";
+import { findServiceArea, normalizePostal } from "@/modules/regions/lookup";
+import { country } from "@/modules/shared/country";
 import { loadAvailability } from "@/modules/scheduling/availability";
 import { materializeJobs } from "@/modules/scheduling/materialize";
 import { localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
@@ -45,8 +46,14 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
 
   const postal = normalizePostal(input.address.postalCode);
   if (!postal?.postalCode)
-    return { ok: false, error: { code: "INVALID_ADDRESS", message: "Enter a full postal code." } };
-  const area = await prisma.serviceArea.findUnique({ where: { fsa: postal.fsa } });
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_ADDRESS",
+        message: `Enter a full ${country.postalLabel.toLowerCase()}.`,
+      },
+    };
+  const area = await findServiceArea(postal);
   if (!area || area.regionId !== region.id)
     return {
       ok: false,
@@ -168,7 +175,7 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
             city: input.address.city,
             province: region.province,
             postalCode: postal.postalCode!,
-            fsa: postal.fsa,
+            postalPrefix: area.postalPrefix,
             entryInstructions: input.address.entryInstructions || null,
             parkingInstructions: input.address.parkingInstructions || null,
             isDefault: true,

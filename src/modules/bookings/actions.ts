@@ -9,7 +9,7 @@ import { createSetupIntent } from "@/modules/payments/setup-intents";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { createQuote } from "@/modules/pricing/quote-service";
 import { quoteRequestSchema, type QuoteRequest } from "@/modules/pricing/schemas";
-import { findRegionByFsa, normalizePostal } from "@/modules/regions/lookup";
+import { areaKey, findRegionForPostal, normalizePostal } from "@/modules/regions/lookup";
 import { loadAvailability, type DayAvailability } from "@/modules/scheduling/availability";
 import { addLocalDays, dateColumnToLocalDate, formatInZone, todayIn } from "@/modules/shared/dates";
 import { hasRole } from "@/modules/auth/roles";
@@ -30,17 +30,22 @@ export type RegionLookupResult =
         timezone: string;
         phone: string | null;
       };
-      fsa: string;
+      area: string;
       postalCode: string | null;
     }
-  | { ok: false; code: "INVALID_POSTAL" | "OUT_OF_AREA"; fsa?: string; postalCode?: string | null };
+  | {
+      ok: false;
+      code: "INVALID_POSTAL" | "OUT_OF_AREA";
+      area?: string;
+      postalCode?: string | null;
+    };
 
 export async function lookupPostalAction(postalInput: string): Promise<RegionLookupResult> {
   const postal = normalizePostal(postalInput);
   if (!postal) return { ok: false, code: "INVALID_POSTAL" };
-  const region = await findRegionByFsa(postal.fsa);
+  const region = await findRegionForPostal(postal);
   if (!region)
-    return { ok: false, code: "OUT_OF_AREA", fsa: postal.fsa, postalCode: postal.postalCode };
+    return { ok: false, code: "OUT_OF_AREA", area: areaKey(postal), postalCode: postal.postalCode };
   return {
     ok: true,
     region: {
@@ -51,7 +56,7 @@ export async function lookupPostalAction(postalInput: string): Promise<RegionLoo
       timezone: region.timezone,
       phone: region.phone,
     },
-    fsa: postal.fsa,
+    area: areaKey(postal),
     postalCode: postal.postalCode,
   };
 }
@@ -159,7 +164,7 @@ export async function confirmBookingAction(
 
 const areaRequestSchema = z.object({
   email: z.string().email(),
-  postalCode: z.string().min(3).max(7),
+  postalCode: z.string().min(3).max(10),
 });
 
 export async function areaRequestAction(raw: unknown): Promise<{ ok: boolean }> {
@@ -173,8 +178,8 @@ export async function areaRequestAction(raw: unknown): Promise<{ ok: boolean }> 
     data: {
       organizationId: org.id,
       email: parsed.data.email.toLowerCase(),
-      postalCode: postal.postalCode ?? postal.fsa,
-      fsa: postal.fsa,
+      postalCode: postal.postalCode ?? areaKey(postal),
+      postalPrefix: areaKey(postal),
     },
   });
   return { ok: true };

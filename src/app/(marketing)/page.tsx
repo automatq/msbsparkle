@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Estimator } from "@/components/marketing/estimator";
 import { prisma } from "@/modules/db/client";
+import { country } from "@/modules/shared/country";
 
 export const revalidate = 3600;
 
@@ -50,7 +51,7 @@ export default async function HomePage() {
 
       <section className="mt-20">
         <h2 className="text-2xl font-semibold">
-          Serving {cityCount} cities across {regions.length} regions in Canada
+          Serving {cityCount} cities across {regions.length} regions in {country.name}
         </h2>
         <ul className="mt-4 flex flex-wrap gap-2 text-sm">
           {regions.flatMap((r) =>
