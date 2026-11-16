@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ServiceAreaPanel } from "@/components/admin/area-tax-panels";
 import { BlackoutPanel, CapacityGrid, RegionPolicyForm } from "@/components/admin/region-panels";
 import { StatusBadge } from "@/components/admin/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,8 +50,8 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
           {r.name}, {r.province} <StatusBadge status={r.status} />
         </h1>
         <p className="text-sm text-muted-foreground">
-          {r.timezone} · {r.serviceAreas.length} postal areas · {r.cities.length} city pages ·
-          pricing:{" "}
+          {r.timezone} · {r.serviceAreas.length} {country.areaLabel}s · {r.cities.length} city pages
+          · pricing:{" "}
           {r.pricingTables.find((t) => t.status === "PUBLISHED")
             ? `region v${r.pricingTables.find((t) => t.status === "PUBLISHED")!.version}`
             : "org default"}{" "}
@@ -116,10 +117,18 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Service area</CardTitle>
+          <CardTitle>Service areas ({country.areaLabel}s)</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
+        <CardContent className="space-y-4 text-sm">
+          <ServiceAreaPanel
+            regionId={r.id}
+            areas={r.serviceAreas.map((a) => ({
+              id: a.id,
+              postalPrefix: a.postalPrefix,
+              active: a.active,
+            }))}
+          />
+          <p className="border-t pt-3">
             City pages:{" "}
             {r.cities.map((c, i) => (
               <span key={c.id}>
@@ -129,10 +138,6 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
                 </Link>
               </span>
             ))}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Service areas ({country.areaLabel}):{" "}
-            {r.serviceAreas.map((a) => a.postalPrefix).join(" ")}
           </p>
         </CardContent>
       </Card>
