@@ -69,12 +69,12 @@ export function OfferButtons({ jobId }: { jobId: string }) {
 
 export function ProgressButtons({
   jobId,
-  status,
+  canGoEnRoute,
   checkedIn,
   checkedOut,
 }: {
   jobId: string;
-  status: string;
+  canGoEnRoute: boolean;
   checkedIn: boolean;
   checkedOut: boolean;
 }) {
@@ -88,7 +88,7 @@ export function ProgressButtons({
   if (!checkedIn) {
     return (
       <div className="flex gap-2">
-        {status === "ASSIGNED" ? (
+        {canGoEnRoute ? (
           <Button
             variant="outline"
             className="flex-1"

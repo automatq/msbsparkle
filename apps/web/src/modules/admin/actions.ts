@@ -41,6 +41,8 @@ async function assertCustomerAccess(ctx: Ctx, customerId: string): Promise<void>
 function fail(e: unknown): ActionResult {
   return { ok: false, message: e instanceof Error ? e.message : "Something went wrong" };
 }
+/** Cleaner statuses that may sign in and work (see resolveCleanerActor). */
+const isWorking = (status: string) => status === "ACTIVE" || status === "ONBOARDING";
 function revalidateJob(jobId: string) {
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/admin/jobs");
@@ -414,9 +416,22 @@ export async function saveCleanerAction(
         notes: d.notes?.trim() || null,
         userId: user.id,
       };
+      const previous = d.id
+        ? await tx.cleaner.findFirst({
+            where: { id: d.id, organizationId: ctx.orgId },
+            select: { status: true },
+          })
+        : null;
       const cleaner = d.id
         ? await tx.cleaner.update({ where: { id: d.id }, data: base })
         : await tx.cleaner.create({ data: { ...base, organizationId: ctx.orgId } });
+      // Taking a cleaner off duty signs them out everywhere: bumping sessionVersion invalidates
+      // their sessions at the next role refresh (see the jwt callback in modules/auth/config.ts).
+      if (previous && isWorking(previous.status) && !isWorking(d.status))
+        await tx.user.update({
+          where: { id: user.id },
+          data: { sessionVersion: { increment: 1 } },
+        });
       await tx.cleanerRegion.deleteMany({ where: { cleanerId: cleaner.id } });
       const regionSet = new Set([d.homeRegionId, ...d.regionIds]);
       await tx.cleanerRegion.createMany({
