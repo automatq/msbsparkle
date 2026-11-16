@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assertRegionAccess, requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { dateColumnToLocalDate, localDateToDateColumn, todayIn } from "@/modules/shared/dates";
+import { country } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
         include: { window: true },
       },
       cities: { orderBy: { name: "asc" } },
-      serviceAreas: { orderBy: { fsa: "asc" } },
+      serviceAreas: { orderBy: { postalPrefix: "asc" } },
       pricingTables: { orderBy: { version: "desc" } },
     },
   });
@@ -130,7 +131,8 @@ export default async function RegionPage({ params }: PageProps<"/admin/regions/[
             ))}
           </p>
           <p className="text-xs text-muted-foreground">
-            Postal areas (FSA): {r.serviceAreas.map((a) => a.fsa).join(" ")}
+            Service areas ({country.areaLabel}):{" "}
+            {r.serviceAreas.map((a) => a.postalPrefix).join(" ")}
           </p>
         </CardContent>
       </Card>

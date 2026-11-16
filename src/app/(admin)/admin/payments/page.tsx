@@ -14,6 +14,7 @@ import { regionWhere } from "@/modules/db/scoped";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { dateColumnToLocalDate } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,7 @@ export default async function PaymentsPage() {
           <TableBody>
             {charges.map((c) => (
               <TableRow key={c.id}>
-                <TableCell>{c.createdAt.toLocaleDateString("en-CA")}</TableCell>
+                <TableCell>{c.createdAt.toLocaleDateString(locale)}</TableCell>
                 <TableCell>{c.type.replaceAll("_", " ")}</TableCell>
                 <TableCell>
                   {c.customer.firstName} {c.customer.lastName}

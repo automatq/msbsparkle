@@ -21,13 +21,14 @@ import {
   addLocalDays,
 } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
+import { timezone } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
 export default async function CleanerPage({ params }: PageProps<"/admin/cleaners/[id]">) {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN", "REGION_ADMIN");
   const { id } = await params;
-  const today = todayIn("America/Toronto");
+  const today = todayIn(timezone);
   const c = await prisma.cleaner.findUnique({
     where: { id },
     include: {

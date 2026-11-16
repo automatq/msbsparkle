@@ -11,6 +11,7 @@ import {
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { regionWhere } from "@/modules/db/scoped";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/admin/
               <TableCell>{c.addresses[0]?.region.name ?? "—"}</TableCell>
               <TableCell>{c._count.bookings}</TableCell>
               <TableCell>{c._count.jobs}</TableCell>
-              <TableCell>{c.createdAt.toLocaleDateString("en-CA")}</TableCell>
+              <TableCell>{c.createdAt.toLocaleDateString(locale)}</TableCell>
             </TableRow>
           ))}
         </TableBody>

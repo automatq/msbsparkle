@@ -20,6 +20,7 @@ import {
   todayIn,
 } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
+import { timezone } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/admin/jobs"
   const p = await searchParams;
   const regions = await visibleRegions(ctx);
   const str = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : "");
-  const today = todayIn("America/Toronto");
+  const today = todayIn(timezone);
   const from = str("from") || today;
   const to = str("to") || addLocalDays(today, 14);
   const status = str("status");

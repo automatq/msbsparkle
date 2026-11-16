@@ -16,6 +16,7 @@ import { prisma } from "@/modules/db/client";
 import { regionWhere } from "@/modules/db/scoped";
 import { dateColumnToLocalDate } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
           {c.firstName} {c.lastName}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {c.email} · {c.phone} · since {c.createdAt.toLocaleDateString("en-CA")} · lifetime paid{" "}
+          {c.email} · {c.phone} · since {c.createdAt.toLocaleDateString(locale)} · lifetime paid{" "}
           {formatCents(lifetime)}
         </p>
       </div>

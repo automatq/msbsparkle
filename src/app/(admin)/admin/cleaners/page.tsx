@@ -12,12 +12,13 @@ import {
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { todayIn, localDateToDateColumn, addLocalDays } from "@/modules/shared/dates";
+import { timezone } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
 export default async function CleanersPage() {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN", "REGION_ADMIN");
-  const today = todayIn("America/Toronto");
+  const today = todayIn(timezone);
   const cleaners = await prisma.cleaner.findMany({
     where: {
       organizationId: ctx.orgId,

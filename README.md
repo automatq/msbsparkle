@@ -72,8 +72,14 @@ Job photos are stored privately and served only through `/api/uploads/…` to ad
 - `src/components/` UI (`ui/` is shadcn)
 - `src/proxy.ts` coarse role-based redirects; authoritative checks are in layouts and server actions via `getCtx()` / `requireRole()`
 
+## Country and locale
+
+One deployment serves one country, set with `NEXT_PUBLIC_COUNTRY` (`CA` or `US`). It drives postal/ZIP validation and labels, provinces/states, currency, number and date formatting, phone numbers, and the company timezone (override with `NEXT_PUBLIC_CURRENCY`, `NEXT_PUBLIC_LOCALE`, `NEXT_PUBLIC_TIMEZONE`). Presets live in `src/modules/shared/country.ts`.
+
+Service areas are postal prefixes matched most-specific-first: Canadian FSAs (`M5V`), or US ZIP5 (`90210`) / ZIP3 (`902`) prefixes. Tax rates are stored per province/state code.
+
 ## Conventions
 
-- Money is integer cents. Percentages are basis points. Use `bpsOf()`.
+- Money is integer cents in the deployment currency. Percentages are basis points. Use `bpsOf()`; format with `formatCents()`.
 - Scheduling truth is `scheduledDate` + local window + region timezone. UTC instants are derived with `zonedToInstant()`.
 - `src/modules/**` never imports from `src/app/**` or `src/components/**`.

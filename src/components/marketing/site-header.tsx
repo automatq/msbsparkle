@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { country } from "@/modules/shared/country";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
 
@@ -33,7 +34,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted-foreground md:grid-cols-3">
         <div>
           <p className="font-medium text-foreground">{brand}</p>
-          <p>Background-checked, insured and bonded cleaners across Canada.</p>
+          <p>Background-checked, insured and bonded cleaners across {country.name}.</p>
         </div>
         <div className="flex flex-col gap-1">
           <Link href="/services">Services</Link>

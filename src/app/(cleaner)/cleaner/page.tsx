@@ -9,6 +9,7 @@ import {
   localDateToDateColumn,
   todayIn,
 } from "@/modules/shared/dates";
+import { locale } from "@/modules/shared/country";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function CleanerHome() {
       <div>
         <h1 className="text-xl font-semibold">Hi {cleaner.firstName}</h1>
         <p className="text-sm text-muted-foreground">
-          {new Date(`${today}T00:00:00Z`).toLocaleDateString("en-CA", {
+          {new Date(`${today}T00:00:00Z`).toLocaleDateString(locale, {
             weekday: "long",
             month: "long",
             day: "numeric",

@@ -4,8 +4,9 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import type { Province, RateKind } from "../src/generated/prisma/enums";
+import type { RateKind } from "../src/generated/prisma/enums";
 import { hashPassword } from "../src/modules/auth/password";
+import { currency } from "../src/modules/shared/country";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -16,7 +17,7 @@ const FSA_LETTERS = "ABCEGHJKLMNPRSTVWXYZ".split(""); // valid 3rd chars of an F
 type RegionSeed = {
   slug: string;
   name: string;
-  province: Province;
+  province: string;
   timezone: string;
   phone: string;
   fsaPrefixes: string[]; // 2-char prefixes, expanded with FSA_LETTERS
@@ -417,6 +418,7 @@ async function main() {
     create: {
       slug: ORG_SLUG,
       name: "MSB Sparkle",
+      defaultCurrency: currency,
       settings: {
         supportEmail: "hello@msbsparkle.ca",
         supportPhone: "1-888-555-0199",
@@ -427,7 +429,7 @@ async function main() {
   });
 
   // Tax rates (effective 2020-01-01, open ended)
-  const taxes: { province: Province; name: string; rateBps: number }[] = [
+  const taxes: { province: string; name: string; rateBps: number }[] = [
     { province: "ON", name: "HST", rateBps: 1300 },
     { province: "AB", name: "GST", rateBps: 500 },
     { province: "BC", name: "GST", rateBps: 500 },
@@ -528,9 +530,9 @@ async function main() {
     });
     for (const fsa of expandFsas(r)) {
       await prisma.serviceArea.upsert({
-        where: { fsa },
+        where: { postalPrefix: fsa },
         update: { regionId: region.id },
-        create: { regionId: region.id, fsa },
+        create: { regionId: region.id, postalPrefix: fsa },
       });
     }
     for (const c of r.cities) {
@@ -792,7 +794,7 @@ async function seedDemo(organizationId: string) {
           city: c.city,
           province: c.province,
           postalCode: c.postal,
-          fsa: c.postal.slice(0, 3),
+          postalPrefix: c.postal.slice(0, 3),
           isDefault: true,
         },
       });

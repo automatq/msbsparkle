@@ -1,4 +1,4 @@
-import type { Frequency, PricingModel, Province, RateKind } from "@/generated/prisma/enums";
+import type { Frequency, PricingModel, RateKind } from "@/generated/prisma/enums";
 
 export const ENGINE_VERSION = "2026.09.1";
 
@@ -16,7 +16,8 @@ export type PromoInput = {
 
 export type QuoteInput = {
   regionId: string;
-  province: Province;
+  /** Province or state code, e.g. "ON" or "NY". */
+  province: string;
   serviceSlug: string;
   pricingModel: PricingModel;
   bedrooms: number;

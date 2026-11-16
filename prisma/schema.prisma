@@ -1,5 +1,5 @@
 // MSB Sparkle data model. See ~/.claude plan for rationale.
-// Money is always integer cents (CAD). Instants are timestamptz (UTC).
+// Money is always integer cents in the deployment currency (Organization.defaultCurrency). Instants are timestamptz (UTC).
 // Scheduling truth = scheduledDate + local window + region timezone; UTC instants are derived.
 
 generator client {
@@ -12,12 +12,6 @@ datasource db {
 }
 
 // ───────────────────────── Enums ─────────────────────────
-
-enum Province {
-  ON
-  AB
-  BC
-}
 
 enum RegionStatus {
   ACTIVE
@@ -347,7 +341,7 @@ model Region {
   organizationId String
   slug           String
   name           String
-  province       Province
+  province       String
   timezone       String
   phone          String?
   email          String?
@@ -400,16 +394,16 @@ model Region {
 
 /// First three characters of a Canadian postal code (Forward Sortation Area). One FSA maps to one region.
 model ServiceArea {
-  id        String   @id @default(cuid())
-  regionId  String
-  fsa       String   @db.Char(3)
-  cityLabel String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  regionId     String
+  postalPrefix String   @map("fsa") @db.VarChar(10)
+  cityLabel    String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   region Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
 
-  @@unique([fsa])
+  @@unique([postalPrefix])
   @@index([regionId])
 }
 
@@ -419,7 +413,7 @@ model City {
   regionId       String
   name           String
   slug           String   @unique
-  province       Province
+  province       String
   seoTitle       String?
   seoDescription String?
   intro          String?
@@ -436,7 +430,7 @@ model City {
 
 model TaxRate {
   id            String    @id @default(cuid())
-  province      Province
+  province      String
   name          String
   rateBps       Int
   effectiveFrom DateTime  @db.Date
@@ -790,9 +784,9 @@ model Address {
   line1               String
   line2               String?
   city                String
-  province            Province
+  province            String
   postalCode          String
-  fsa                 String    @db.Char(3)
+  postalPrefix        String    @map("fsa") @db.VarChar(10)
   lat                 Float?
   lng                 Float?
   placeId             String?
@@ -1382,10 +1376,10 @@ model ServiceAreaRequest {
   organizationId String
   email          String
   postalCode     String
-  fsa            String   @db.Char(3)
+  postalPrefix   String   @map("fsa") @db.VarChar(10)
   createdAt      DateTime @default(now())
 
-  @@index([fsa])
+  @@index([postalPrefix])
 }
 
 /// Fixed-window rate limiting without an external store. Rows are pruned by the retention task.

@@ -3,6 +3,7 @@ import { sendEmail } from "@/modules/notifications/email";
 import { appUrl, brand } from "@/modules/notifications/send";
 import { adminDigestTemplate } from "@/modules/notifications/templates";
 import { addLocalDays, localDateToDateColumn, todayIn } from "@/modules/shared/dates";
+import { timezone } from "@/modules/shared/country";
 
 /** Emails every super admin a per-region summary for today. */
 export async function runAdminDigest(now = new Date()): Promise<{ recipients: number }> {
@@ -44,7 +45,7 @@ export async function runAdminDigest(now = new Date()): Promise<{ recipients: nu
   const admins = await prisma.user.findMany({
     where: { organizationId: org.id, status: "ACTIVE", roles: { some: { role: "SUPER_ADMIN" } } },
   });
-  const date = todayIn("America/Toronto", now);
+  const date = todayIn(timezone, now);
   const msg = adminDigestTemplate({
     brand: brand(),
     date,

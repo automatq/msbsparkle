@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
-import { findRegionByFsa, normalizePostal } from "@/modules/regions/lookup";
+import { areaKey, findRegionForPostal, normalizePostal } from "@/modules/regions/lookup";
+import { country } from "@/modules/shared/country";
 import { todayIn } from "@/modules/shared/dates";
 import { computeQuote } from "./engine";
 import { resolveRates } from "./resolve-rates";
@@ -11,7 +12,7 @@ import type { PromoInput, QuoteInput, QuoteResult } from "./types";
 export type QuoteError = {
   code: "INVALID_POSTAL" | "OUT_OF_AREA" | "UNKNOWN_SERVICE" | "INVALID_PROMO";
   message: string;
-  fsa?: string;
+  area?: string;
 };
 
 export type QuoteSuccess = {
@@ -66,13 +67,20 @@ export async function createQuote(
   if (!postal)
     return {
       ok: false,
-      error: { code: "INVALID_POSTAL", message: "Enter a valid Canadian postal code." },
+      error: {
+        code: "INVALID_POSTAL",
+        message: `Enter a valid ${country.postalLabel.toLowerCase()}.`,
+      },
     };
-  const region = await findRegionByFsa(postal.fsa);
+  const region = await findRegionForPostal(postal);
   if (!region)
     return {
       ok: false,
-      error: { code: "OUT_OF_AREA", message: "We don't serve that area yet.", fsa: postal.fsa },
+      error: {
+        code: "OUT_OF_AREA",
+        message: "We don't serve that area yet.",
+        area: areaKey(postal),
+      },
     };
 
   const service = await prisma.service.findUnique({

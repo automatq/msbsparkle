@@ -3,6 +3,7 @@ import type { Charge } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { getStripe } from "./stripe";
+import { currency } from "@/modules/shared/country";
 
 export type ChargeResult =
   | { ok: true; chargeId: string; status: string }
@@ -119,7 +120,7 @@ export async function createServiceCharge(
     const pi = await stripe.paymentIntents.create(
       {
         amount: charge.cardCents,
-        currency: "cad",
+        currency: currency.toLowerCase(),
         customer: job.customer.stripeCustomerId!,
         payment_method: chargePm.stripePaymentMethodId,
         off_session: true,

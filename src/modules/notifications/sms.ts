@@ -9,14 +9,8 @@ export function isTwilioConfigured(): boolean {
   );
 }
 
-/** E.164-ish normalization for Canadian/US numbers. */
-export function normalizePhone(input: string): string | null {
-  const digits = input.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  if (input.trim().startsWith("+") && digits.length >= 8) return `+${digits}`;
-  return null;
-}
+/** E.164 normalization using the deployment country (see shared/country). */
+export { normalizePhone } from "@/modules/shared/country";
 
 async function deliver(to: string, body: string): Promise<string | null> {
   if (!isTwilioConfigured()) {

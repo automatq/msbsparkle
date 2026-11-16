@@ -10,6 +10,7 @@ import {
 import { runReminders } from "./tasks/reminders";
 import { runRetention } from "./tasks/retention";
 import { runSeriesMaterialization } from "./tasks/series";
+import { timezone } from "@/modules/shared/country";
 
 const grace = () => `${Number(process.env.CHARGE_GRACE_MINUTES ?? 120)}m`;
 
@@ -58,7 +59,7 @@ export const materializeSeries = inngest.createFunction(
   async ({ step }) => step.run("materialize", () => runSeriesMaterialization()),
 );
 export const adminDigest = inngest.createFunction(
-  { id: "admin-digest", triggers: [{ cron: "TZ=America/Toronto 0 7 * * *" }] },
+  { id: "admin-digest", triggers: [{ cron: `TZ=${timezone} 0 7 * * *` }] },
   async ({ step }) => step.run("digest", () => runAdminDigest()),
 );
 

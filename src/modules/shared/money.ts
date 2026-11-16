@@ -1,3 +1,5 @@
+import { currency as defaultCurrency, locale as defaultLocale } from "./country";
+
 /** All money is integer cents. bps = basis points (10000 = 100%). */
 
 export function bpsOf(cents: number, bps: number): number {
@@ -8,7 +10,7 @@ export function formatCents(
   cents: number,
   opts: { currency?: string; locale?: string } = {},
 ): string {
-  const { currency = "CAD", locale = "en-CA" } = opts;
+  const { currency = defaultCurrency, locale = defaultLocale } = opts;
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,

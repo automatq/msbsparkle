@@ -7,9 +7,10 @@ import {
   localDateToDateColumn,
   todayIn,
 } from "@/modules/shared/dates";
+import { timezone } from "@/modules/shared/country";
 
 export async function reportData(ctx: Ctx, weeks = 8) {
-  const today = todayIn("America/Toronto");
+  const today = todayIn(timezone);
   const from = addLocalDays(today, -7 * weeks);
   const to = addLocalDays(today, 7);
   const scope = regionWhere(ctx);

@@ -19,6 +19,7 @@ import {
   type CustomerActionResult,
 } from "@/modules/customer/actions";
 import type { DayAvailability } from "@/modules/scheduling/availability";
+import { locale } from "@/modules/shared/country";
 
 function useRun() {
   const router = useRouter();
@@ -37,7 +38,7 @@ function useRun() {
 
 function formatDay(date: string) {
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-CA", {
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
