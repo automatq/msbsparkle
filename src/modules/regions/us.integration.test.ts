@@ -29,7 +29,10 @@ describe.skipIf(!enabled)("US deployment (integration)", () => {
 
   afterAll(async () => {
     await mods.prisma.taxRate.deleteMany({ where: { province: "TX" } });
-    if (regionId) await mods.prisma.region.delete({ where: { id: regionId } });
+    if (regionId) {
+      await mods.prisma.priceQuote.deleteMany({ where: { regionId } });
+      await mods.prisma.region.delete({ where: { id: regionId } });
+    }
     vi.unstubAllEnvs();
   });
 

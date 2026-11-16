@@ -13,6 +13,8 @@ const created = { regions: [] as string[], taxes: [] as string[] };
 describe.skipIf(!enabled)("region, service area and tax admin (integration)", () => {
   afterAll(async () => {
     await prisma.taxRate.deleteMany({ where: { province: "YT" } });
+    // Quotes and city pages reference the region without cascading deletes.
+    await prisma.priceQuote.deleteMany({ where: { regionId: { in: created.regions } } });
     await prisma.city.deleteMany({ where: { regionId: { in: created.regions } } });
     await prisma.region.deleteMany({ where: { id: { in: created.regions } } });
   });
