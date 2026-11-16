@@ -1,34 +1,10 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { ActorType, JobStatus } from "@/generated/prisma/enums";
+import type { JobStatus } from "@/generated/prisma/enums";
+import { jobPayload } from "@/modules/webhooks/payloads";
+import { recordWebhookEvent } from "@/modules/webhooks/queue";
+import { TransitionError, canTransition, jobWebhookEvent, type Actor } from "./transitions";
 
-export const JOB_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
-  PENDING: ["CONFIRMED", "CANCELLED", "SKIPPED"],
-  CONFIRMED: ["ASSIGNED", "PENDING", "CANCELLED", "SKIPPED"],
-  ASSIGNED: ["CONFIRMED", "EN_ROUTE", "IN_PROGRESS", "CANCELLED", "SKIPPED", "NO_SHOW"],
-  EN_ROUTE: ["IN_PROGRESS", "ASSIGNED", "NO_SHOW", "CANCELLED"],
-  IN_PROGRESS: ["COMPLETED", "NO_SHOW"],
-  COMPLETED: ["IN_PROGRESS"], // admin reopen only, before capture
-  CANCELLED: [],
-  SKIPPED: [],
-  NO_SHOW: [],
-};
-
-export const TERMINAL_JOB_STATUSES: JobStatus[] = ["CANCELLED", "SKIPPED", "NO_SHOW"];
-
-export function canTransition(from: JobStatus, to: JobStatus): boolean {
-  return JOB_TRANSITIONS[from]?.includes(to) ?? false;
-}
-
-export class TransitionError extends Error {
-  constructor(
-    public from: JobStatus,
-    public to: JobStatus,
-  ) {
-    super(`Cannot move job from ${from} to ${to}`);
-  }
-}
-
-export type Actor = { type: ActorType; id?: string | null };
+export * from "./transitions";
 
 /**
  * Single choke point for job status changes: validates the transition, applies
@@ -43,7 +19,7 @@ export async function transitionJob(
 ) {
   const job = await tx.job.findUniqueOrThrow({
     where: { id: jobId },
-    select: { status: true, paymentStatus: true, completedAt: true },
+    select: { status: true, paymentStatus: true, completedAt: true, organizationId: true },
   });
   if (!canTransition(job.status, to)) throw new TransitionError(job.status, to);
   if (job.status === "COMPLETED" && to === "IN_PROGRESS") {
@@ -69,7 +45,7 @@ export async function transitionJob(
     if (typeof data.reason === "string") patch.cancellationReason = data.reason;
   }
   const updated = await tx.job.update({ where: { id: jobId }, data: patch });
-  await tx.jobEvent.create({
+  const event = await tx.jobEvent.create({
     data: {
       jobId,
       type: "STATUS_CHANGED",
@@ -78,5 +54,13 @@ export async function transitionJob(
       data: { from: job.status, to, ...data },
     },
   });
+  const webhook = jobWebhookEvent(job.status, to);
+  if (webhook)
+    await recordWebhookEvent(tx, {
+      organizationId: job.organizationId,
+      type: webhook,
+      key: `${webhook}:${event.id}`,
+      data: (db) => jobPayload(db, jobId),
+    });
   return updated;
 }

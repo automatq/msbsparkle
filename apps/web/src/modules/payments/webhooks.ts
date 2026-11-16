@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { prisma } from "@/modules/db/client";
 import { issueGiftCard } from "@/modules/gift-cards/service";
+import { recordPaymentEvent } from "@/modules/webhooks/queue";
 import { intentChargeStatus } from "./charges";
 
 /** Reconcile local state from Stripe events. Handlers must be idempotent. */
@@ -70,6 +71,12 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           },
         });
       }
+      if (status === "CAPTURED" || status === "FAILED")
+        await recordPaymentEvent(
+          prisma,
+          charge.id,
+          status === "CAPTURED" ? "payment.succeeded" : "payment.failed",
+        );
       return;
     }
     case "charge.refunded": {
@@ -89,6 +96,9 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           where: { id: charge.jobId },
           data: { paymentStatus: full ? "REFUNDED" : "PARTIALLY_REFUNDED" },
         });
+      await recordPaymentEvent(prisma, charge.id, "payment.refunded", {
+        refundedCents: ch.amount_refunded,
+      });
       return;
     }
     case "charge.dispute.created": {

@@ -12,6 +12,8 @@ import { materializeJobs } from "@/modules/scheduling/materialize";
 import { localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
 import { lookupGiftCard } from "@/modules/gift-cards/service";
 import { generateBookingNumber } from "./booking-number";
+import { bookingPayload } from "@/modules/webhooks/payloads";
+import { recordWebhookEvent } from "@/modules/webhooks/queue";
 import type { ConfirmBookingInput } from "@msb/shared/bookings";
 
 export type CreateBookingError = {
@@ -266,6 +268,12 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
             },
           });
         }
+        await recordWebhookEvent(tx, {
+          organizationId: region.organizationId,
+          type: "booking.created",
+          key: `booking.created:${booking.id}`,
+          data: (db) => bookingPayload(db, booking.id),
+        });
         await tx.auditLog.create({
           data: {
             organizationId: region.organizationId,

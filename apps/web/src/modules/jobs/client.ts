@@ -16,6 +16,8 @@ export type Events = {
       previousStartAt?: string | null;
     };
   };
+  /** Outgoing webhooks were recorded; deliver whatever is due. */
+  "webhooks/flush": { data: Record<string, never> };
 };
 
 export const inngest = new Inngest({ id: "msbsparkle" });

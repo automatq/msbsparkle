@@ -38,6 +38,8 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       SEED_ADMIN_EMAIL: admin@msbsparkle.local
       SEED_ADMIN_PASSWORD: admin12345!
+      # e2e points a webhook endpoint at a local test server.
+      WEBHOOKS_ALLOW_PRIVATE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

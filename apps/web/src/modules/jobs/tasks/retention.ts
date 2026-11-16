@@ -3,16 +3,20 @@ import { prisma } from "@/modules/db/client";
 import { pruneRateLimits } from "@/modules/shared/rate-limit";
 import { deleteObject } from "@/modules/storage";
 import { purgeLocations } from "@/modules/tracking/service";
+import { pruneDeliveries } from "@/modules/webhooks/manage";
 
 export const PHOTO_RETENTION_DAYS = 90;
 
 /**
  * Deletes job photos older than the retention window (files + rows), cleaner location pings older
- * than 7 days, and prunes rate-limit windows.
+ * than 7 days, webhook deliveries older than 30 days, and prunes rate-limit windows.
  */
-export async function runRetention(
-  now = new Date(),
-): Promise<{ photosDeleted: number; locationPingsDeleted: number; rateLimitRowsPruned: number }> {
+export async function runRetention(now = new Date()): Promise<{
+  photosDeleted: number;
+  locationPingsDeleted: number;
+  rateLimitRowsPruned: number;
+  webhookDeliveriesDeleted: number;
+}> {
   const cutoff = new Date(now.getTime() - PHOTO_RETENTION_DAYS * 86_400_000);
   const photos = await prisma.jobPhoto.findMany({
     where: { takenAt: { lt: cutoff } },
@@ -24,7 +28,13 @@ export async function runRetention(
   }
   const locationPingsDeleted = await purgeLocations(now);
   const rateLimitRowsPruned = await pruneRateLimits(now);
-  return { photosDeleted: photos.length, locationPingsDeleted, rateLimitRowsPruned };
+  const webhookDeliveriesDeleted = await pruneDeliveries(now);
+  return {
+    photosDeleted: photos.length,
+    locationPingsDeleted,
+    rateLimitRowsPruned,
+    webhookDeliveriesDeleted,
+  };
 }
 
 /**
