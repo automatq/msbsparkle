@@ -109,7 +109,18 @@ test("cleaner: OTP login, accept assignment, check in, checklist, photo, check o
     ),
   });
   await expect(page.getByText("Photo added")).toBeVisible();
-  await expect(page.locator("img[alt='AFTER']")).toBeVisible();
+  // The photo must actually load (a broken <img> is still "visible"), and only for signed-in
+  // people allowed to see the job.
+  const photo = page.locator("img[alt='AFTER']");
+  await expect(photo).toBeVisible();
+  await expect
+    .poll(() => photo.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0)))
+    .toBeGreaterThan(0);
+  const src = (await photo.getAttribute("src"))!;
+  const asCleaner = await page.request.get(src);
+  expect(asCleaner.status()).toBe(200);
+  expect(asCleaner.headers()["content-type"]).toMatch(/^image\//);
+  expect((await request.get(src)).status()).toBe(401);
   await page.getByTestId("check-out").click();
   await expect(page.getByText("Job complete")).toBeVisible();
   await expect(page.locator("main").getByText("COMPLETED", { exact: true })).toBeVisible();
