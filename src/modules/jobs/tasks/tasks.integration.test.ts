@@ -10,6 +10,7 @@ import {
   weekdayOf,
   zonedToInstant,
 } from "@/modules/shared/dates";
+import { STALE_PENDING_MS, claimServiceCharge } from "@/modules/payments/charges";
 import { chargeCompletedJob } from "./charges";
 import { runCutoff } from "./cutoff";
 import { runReminders } from "./reminders";
@@ -199,5 +200,75 @@ describe.skipIf(!enabled)("background tasks (integration)", () => {
     });
     const res = await chargeCompletedJob(job.id);
     expect(res.status).toMatch(/^(skipped:no-stripe|charged|failed)/);
+  });
+
+  describe("service charge claiming", () => {
+    async function claimInput(amount = 15707) {
+      const { job } = await seedBooking({ startInHours: 2 });
+      return {
+        idempotencyKey: `job:${job.id}:service:${job.activeQuoteId}`,
+        amount,
+        pmId: null,
+        giftCardId: null,
+        create: {
+          organizationId: job.organizationId,
+          customerId: job.customerId,
+          jobId: job.id,
+          quoteId: job.activeQuoteId!,
+        },
+      };
+    }
+
+    it("lets exactly one of several concurrent callers start an attempt", async () => {
+      const input = await claimInput();
+      const results = await Promise.all(Array.from({ length: 6 }, () => claimServiceCharge(input)));
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok).every((r) => !r.ok && r.code === "IN_PROGRESS")).toBe(
+        true,
+      );
+      expect(await prisma.charge.count({ where: { idempotencyKey: input.idempotencyKey } })).toBe(
+        1,
+      );
+    });
+
+    it("blocks a second attempt while one is in flight, replays a stale one unchanged", async () => {
+      const input = await claimInput();
+      const first = await claimServiceCharge(input);
+      expect(first.ok).toBe(true);
+      const busy = await claimServiceCharge(input);
+      expect(!busy.ok && busy.code).toBe("IN_PROGRESS");
+
+      const later = new Date(Date.now() + STALE_PENDING_MS + 1000);
+      const replay = await claimServiceCharge({ ...input, amount: input.amount + 500, now: later });
+      expect(replay.ok).toBe(true);
+      if (replay.ok && first.ok) {
+        // Same attempt number and amount, so Stripe's idempotency key replays the original call.
+        expect(replay.charge.attemptCount).toBe(first.charge.attemptCount);
+        expect(replay.charge.cardCents).toBe(first.charge.cardCents);
+      }
+    });
+
+    it("starts a new attempt with the current amount after a definite failure", async () => {
+      const input = await claimInput();
+      const first = await claimServiceCharge(input);
+      if (!first.ok) throw new Error("expected claim");
+      await prisma.charge.update({ where: { id: first.charge.id }, data: { status: "FAILED" } });
+      const retry = await claimServiceCharge({ ...input, amount: input.amount + 1000 }); // tip added
+      expect(retry.ok).toBe(true);
+      if (retry.ok) {
+        expect(retry.charge.attemptCount).toBe(first.charge.attemptCount + 1);
+        expect(retry.charge.cardCents).toBe(input.amount + 1000);
+        expect(retry.charge.status).toBe("PENDING");
+      }
+    });
+
+    it("refuses to charge again once captured", async () => {
+      const input = await claimInput();
+      const first = await claimServiceCharge(input);
+      if (!first.ok) throw new Error("expected claim");
+      await prisma.charge.update({ where: { id: first.charge.id }, data: { status: "CAPTURED" } });
+      const again = await claimServiceCharge(input);
+      expect(!again.ok && again.code).toBe("ALREADY_PAID");
+    });
   });
 });

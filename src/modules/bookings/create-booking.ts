@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
 import { verifyAndAttachSetupIntent } from "@/modules/payments/setup-intents";
+import { canActAsCustomer } from "@/modules/payments/customers";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { recomputeQuote } from "@/modules/pricing/quote-service";
 import type { QuoteInput } from "@/modules/pricing/types";
@@ -103,7 +104,11 @@ export async function createBooking(input: ConfirmBookingInput): Promise<CreateB
         error: { code: "PAYMENT_REQUIRED", message: "Please add a card to continue." },
       };
     try {
-      const pm = await verifyAndAttachSetupIntent(input.setupIntentId, customer.id);
+      // The card always pays for this booking; it only becomes the customer's default card when
+      // the person checking out is allowed to manage that customer (see canActAsCustomer).
+      const pm = await verifyAndAttachSetupIntent(input.setupIntentId, customer.id, {
+        makeDefault: await canActAsCustomer(customer),
+      });
       paymentMethodId = pm.id;
     } catch (e) {
       return {

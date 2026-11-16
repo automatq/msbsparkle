@@ -7,10 +7,14 @@ import { createEarningForAssignment } from "@/modules/cleaner/earnings";
 import { prisma } from "@/modules/db/client";
 import { transitionJob, type Actor } from "@/modules/jobs/state-machine";
 import { emit } from "@/modules/jobs/client";
-import { putObject } from "@/modules/storage/local";
+import { putObject } from "@/modules/storage";
+import { sniffImageType } from "@/modules/storage/image-type";
 
 export type CleanerActionResult =
   { ok: true; message?: string; warnings?: string[] } | { ok: false; message: string };
+
+/** Matches serverActions.bodySizeLimit in next.config.ts, minus multipart overhead. */
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024 - 64 * 1024;
 
 async function me() {
   const ctx = await getCtx("CLEANER", "SUPER_ADMIN");
@@ -195,14 +199,18 @@ export async function uploadPhotoAction(
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0)
       return { ok: false, message: "Choose a photo." };
-    if (file.size > 12 * 1024 * 1024)
-      return { ok: false, message: "Photo is too large (12 MB max)." };
-    if (!file.type.startsWith("image/")) return { ok: false, message: "Only images are allowed." };
+    if (file.size > MAX_PHOTO_BYTES)
+      return { ok: false, message: "Photo is too large (4 MB max)." };
     const buf = Buffer.from(await file.arrayBuffer());
+    // Trust the bytes, not the browser-supplied type: only JPEG, PNG, WebP and HEIC are stored.
+    const contentType = sniffImageType(buf);
+    if (!contentType)
+      return { ok: false, message: "Only JPEG, PNG, WebP or HEIC photos are allowed." };
     const { key, url } = await putObject(
       `jobs/${jobId}`,
       file.name || `${kind.toLowerCase()}.jpg`,
       buf,
+      contentType,
     );
     await prisma.jobPhoto.create({
       data: { jobId, cleanerId: cleaner.id, kind, storageKey: key, url },

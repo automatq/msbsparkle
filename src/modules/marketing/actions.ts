@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/modules/db/client";
 import { normalizePhone } from "@/modules/notifications/sms";
+import { allowIp } from "@/modules/shared/rate-limit";
 
 const applicationSchema = z.object({
   firstName: z.string().trim().min(1).max(60),
@@ -19,6 +20,8 @@ export async function submitApplicationAction(
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const parsed = applicationSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, message: "Please check the form." };
+  if (!(await allowIp("application:ip", 5, 60 * 60)))
+    return { ok: false, message: "Too many attempts. Please try again later." };
   const d = parsed.data;
   const org = await prisma.organization.findFirstOrThrow({ select: { id: true } });
   const region = await prisma.region.findFirst({

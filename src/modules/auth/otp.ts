@@ -3,6 +3,7 @@ import { prisma } from "@/modules/db/client";
 import { sendEmail } from "@/modules/notifications/email";
 import { isTwilioConfigured, normalizePhone, sendSms } from "@/modules/notifications/sms";
 import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
+import { otpVerifyAllowed } from "./limits";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ACTIVE_CODES = 3;
@@ -84,6 +85,12 @@ export async function requestOtp(phoneInput: string): Promise<OtpRequestResult> 
 export async function verifyOtp(phoneInput: string, code: string): Promise<string | null> {
   const phone = normalizePhone(phoneInput);
   if (!phone || !/^\d{6}$/.test(code.trim())) return null;
+  if (!(await otpVerifyAllowed(phone))) {
+    // Too many guesses: burn the outstanding codes so the attacker must request new ones, which
+    // is itself rate-limited.
+    await prisma.verificationToken.deleteMany({ where: { identifier: `otp:${phone}` } });
+    return null;
+  }
   const tokens = await prisma.verificationToken.findMany({
     where: { identifier: `otp:${phone}`, expires: { gt: new Date() } },
   });

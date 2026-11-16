@@ -1,7 +1,11 @@
 import { prisma } from "@/modules/db/client";
 import { appUrl, brand, customerTarget, notify } from "@/modules/notifications/send";
-import { paymentFailedTemplate, receiptTemplate } from "@/modules/notifications/templates";
-import { createServiceCharge } from "@/modules/payments/charges";
+import {
+  paymentActionTemplate,
+  paymentFailedTemplate,
+  receiptTemplate,
+} from "@/modules/notifications/templates";
+import { STALE_PENDING_MS, createServiceCharge } from "@/modules/payments/charges";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { formatInZone } from "@/modules/shared/dates";
 
@@ -46,6 +50,30 @@ export async function chargeCompletedJob(jobId: string): Promise<{ status: strin
       ["email"],
     );
     return { status: "charged" };
+  }
+  if (res.code === "REQUIRES_ACTION") {
+    // Off-session charge needs 3D Secure: ask the customer to confirm it on-session. Retrying
+    // off-session would only fail again, so no retry is scheduled.
+    const charge = await prisma.charge.findFirst({
+      where: { jobId, type: "SERVICE", status: "REQUIRES_ACTION" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (charge) {
+      const msg = paymentActionTemplate({
+        brand: brand(),
+        firstName: job.customer.firstName,
+        when,
+        amountCents: charge.cardCents,
+        confirmUrl: `${appUrl()}/account/pay/${charge.id}`,
+      });
+      await notify(
+        await customerTarget(job.customerId, { jobId }),
+        "payment.action_required",
+        msg,
+        `payment.action_required:${charge.id}:${charge.attemptCount}`,
+      );
+    }
+    return { status: "requires-action" };
   }
   if (res.code === "NO_CARD" || res.code === "STRIPE_ERROR") {
     const charge = await prisma.charge.findFirst({
@@ -95,7 +123,16 @@ export async function chargeCompletedJob(jobId: string): Promise<{ status: strin
 /** Retries FAILED service charges whose retry time has come. */
 export async function runPaymentRetries(now = new Date()): Promise<{ retried: number }> {
   const due = await prisma.charge.findMany({
-    where: { type: "SERVICE", status: "FAILED", nextRetryAt: { lte: now }, jobId: { not: null } },
+    where: {
+      type: "SERVICE",
+      jobId: { not: null },
+      OR: [
+        { status: "FAILED", nextRetryAt: { lte: now } },
+        // Attempts whose outcome was never recorded (crash or network error): replaying them with
+        // the same idempotency key reconciles with Stripe without charging twice.
+        { status: "PENDING", updatedAt: { lt: new Date(now.getTime() - STALE_PENDING_MS) } },
+      ],
+    },
     select: { jobId: true },
   });
   let retried = 0;

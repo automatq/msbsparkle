@@ -190,7 +190,8 @@ export async function rateVisitAction(
       return { ok: false, message: "You can rate a visit once it's complete." };
     if (job.review) return { ok: false, message: "You already rated this visit." };
     const lead = job.assignments.find((a) => a.role === "LEAD") ?? job.assignments[0];
-    await prisma.$transaction(async (tx) => {
+    const tipCharged = await prisma.$transaction(async (tx) => {
+      let separateTipCharge = false;
       await tx.review.create({
         data: {
           jobId,
@@ -218,19 +219,29 @@ export async function rateVisitAction(
         });
         const n = Math.max(1, job.assignments.length);
         await tx.tipSplit.createMany({
-          data: job.assignments.map((a) => ({
+          data: job.assignments.map((a, i) => ({
             tipId: tip.id,
             cleanerId: a.cleanerId,
-            amountCents: Math.floor(d.tipCents / n),
+            amountCents: splitShare(d.tipCents, n, i),
           })),
         });
-        // Not charged yet? Fold the tip into the service charge. Otherwise charge it separately.
-        if (job.paymentStatus === "UNPAID" || job.paymentStatus === "FAILED") {
+        // Fold the tip into the service charge only when no attempt is in flight or settled: a
+        // new attempt re-reads the amount, an in-flight or captured one would miss the tip.
+        const serviceCharge = await tx.charge.findFirst({
+          where: { jobId, type: "SERVICE" },
+          orderBy: { createdAt: "desc" },
+          select: { status: true },
+        });
+        const foldable =
+          (job.paymentStatus === "UNPAID" || job.paymentStatus === "FAILED") &&
+          (!serviceCharge || ["FAILED", "FAILED_FINAL", "CANCELED"].includes(serviceCharge.status));
+        if (foldable) {
           await tx.job.update({
             where: { id: jobId },
             data: { tipCents: { increment: d.tipCents } },
           });
         } else {
+          separateTipCharge = true;
           await tx.charge.create({
             data: {
               organizationId: job.organizationId,
@@ -245,15 +256,13 @@ export async function rateVisitAction(
             },
           });
         }
-        for (const a of job.assignments) {
+        for (const [i, a] of job.assignments.entries()) {
+          const share = splitShare(d.tipCents, n, i);
           const e = await tx.cleanerEarning.findUnique({ where: { assignmentId: a.id } });
           if (e && e.status === "PENDING")
             await tx.cleanerEarning.update({
               where: { id: e.id },
-              data: {
-                tipCents: { increment: Math.floor(d.tipCents / n) },
-                totalCents: { increment: Math.floor(d.tipCents / n) },
-              },
+              data: { tipCents: { increment: share }, totalCents: { increment: share } },
             });
         }
       }
@@ -266,8 +275,9 @@ export async function rateVisitAction(
           data: { review: d.rating, tipCents: d.tipCents },
         },
       });
+      return separateTipCharge;
     });
-    if (d.tipCents > 0 && job.paymentStatus === "PAID") await collectTipNow(jobId);
+    if (tipCharged) await collectTipNow(jobId);
     revalidate(job.bookingId, jobId);
     return {
       ok: true,
@@ -276,6 +286,12 @@ export async function rateVisitAction(
   } catch (e) {
     return fail(e);
   }
+}
+
+/** Splits cents evenly; the first `remainder` people get one extra cent so nothing is lost. */
+function splitShare(totalCents: number, people: number, index: number): number {
+  const base = Math.floor(totalCents / people);
+  return base + (index < totalCents % people ? 1 : 0);
 }
 
 /** Charges a pending TIP charge off-session when Stripe is configured. */

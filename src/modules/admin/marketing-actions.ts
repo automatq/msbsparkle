@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getCtx } from "@/modules/auth/session";
+import { ForbiddenError, getCtx } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import type { ActionResult } from "./actions";
 
@@ -78,7 +78,14 @@ export async function setApplicationStatusAction(
   notes?: string,
 ): Promise<ActionResult> {
   try {
-    await getCtx("SUPER_ADMIN", "REGION_ADMIN");
+    const ctx = await getCtx("SUPER_ADMIN", "REGION_ADMIN");
+    const app = await prisma.cleanerApplication.findUniqueOrThrow({
+      where: { id },
+      select: { regionId: true },
+    });
+    // Applications without a matched region are handled by super admins.
+    if (!ctx.isSuperAdmin && (!app.regionId || !ctx.regionIds.includes(app.regionId)))
+      throw new ForbiddenError("No access to this application");
     await prisma.cleanerApplication.update({
       where: { id },
       data: { status, notes: notes?.trim() || undefined },

@@ -7,6 +7,12 @@ import Resend from "next-auth/providers/resend";
 import { z } from "zod";
 import { prisma } from "@/modules/db/client";
 import { edgeAuthConfig } from "./edge-config";
+import {
+  RateLimitedSignin,
+  adminLoginAllowed,
+  magicLinkAllowed,
+  recordAdminLoginFailure,
+} from "./limits";
 import { verifyOtp } from "./otp";
 import { verifyPassword } from "./password";
 import type { RoleClaim } from "./roles";
@@ -42,16 +48,34 @@ async function loadRoles(
 
 function emailProvider() {
   if (process.env.RESEND_API_KEY) {
-    return Resend({ apiKey: process.env.RESEND_API_KEY, from: process.env.EMAIL_FROM });
+    const opts = { apiKey: process.env.RESEND_API_KEY, from: process.env.EMAIL_FROM };
+    const send = Resend(opts).sendVerificationRequest;
+    return Resend({ ...opts, sendVerificationRequest: throttled(send) });
   }
-  return Nodemailer({
+  const opts = {
     server: {
       host: process.env.SMTP_HOST ?? "localhost",
       port: Number(process.env.SMTP_PORT ?? 1025),
       secure: false,
     },
     from: process.env.EMAIL_FROM,
-  });
+  };
+  const send = Nodemailer(opts).sendVerificationRequest;
+  return Nodemailer({ ...opts, sendVerificationRequest: throttled(send) });
+}
+
+/**
+ * Rate-limits magic links however sign-in is reached (login page or POST /api/auth/signin/*).
+ * Over the limit, the email is silently not sent, which also avoids revealing account existence.
+ */
+function throttled<P extends { identifier: string }>(send: (params: P) => unknown) {
+  return async (params: P) => {
+    if (!(await magicLinkAllowed(params.identifier))) {
+      console.warn("[auth] magic link rate limited");
+      return;
+    }
+    await send(params);
+  };
 }
 
 /**
@@ -100,6 +124,36 @@ function orgAwareAdapter(): Adapter {
   };
 }
 
+async function verifyAdmin(email: string, password: string, totp: string | undefined) {
+  const user = await prisma.user.findFirst({
+    where: {
+      email,
+      status: "ACTIVE",
+      roles: { some: { role: { in: ["SUPER_ADMIN", "REGION_ADMIN"] } } },
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+    },
+  });
+  if (!user?.passwordHash) return null;
+  if (!(await verifyPassword(user.passwordHash, password))) return null;
+  if (user.totpEnabled) {
+    if (!totp || !user.totpSecret) return null;
+    if (!verifyTotp(decryptSecret(user.totpSecret), totp)) return null;
+  }
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    amr: user.totpEnabled ? ["pwd", "totp"] : ["pwd"],
+  };
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...edgeAuthConfig,
   adapter: orgAwareAdapter(),
@@ -133,33 +187,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = adminCredentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
         const { email, password, totp } = parsed.data;
-        const user = await prisma.user.findFirst({
-          where: {
-            email: email.toLowerCase(),
-            status: "ACTIVE",
-            roles: { some: { role: { in: ["SUPER_ADMIN", "REGION_ADMIN"] } } },
-          },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            passwordHash: true,
-            totpEnabled: true,
-            totpSecret: true,
-          },
-        });
-        if (!user?.passwordHash) return null;
-        if (!(await verifyPassword(user.passwordHash, password))) return null;
-        if (user.totpEnabled) {
-          if (!totp || !user.totpSecret) return null;
-          if (!verifyTotp(decryptSecret(user.totpSecret), totp)) return null;
+        const emailKey = email.toLowerCase();
+        if (!(await adminLoginAllowed(emailKey))) throw new RateLimitedSignin();
+        const user = await verifyAdmin(emailKey, password, totp);
+        if (!user) {
+          await recordAdminLoginFailure(emailKey);
+          return null;
         }
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          amr: user.totpEnabled ? ["pwd", "totp"] : ["pwd"],
-        } as never;
+        return user as never;
       },
     }),
   ],

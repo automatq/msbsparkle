@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { prisma } from "@/modules/db/client";
 import { issueGiftCard } from "@/modules/gift-cards/service";
+import { intentChargeStatus } from "./charges";
 
 /** Reconcile local state from Stripe events. Handlers must be idempotent. */
 export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
@@ -42,12 +43,14 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       const pi = event.data.object;
       const charge = await prisma.charge.findUnique({ where: { stripePaymentIntentId: pi.id } });
       if (!charge) return; // may arrive before our row commits; the primary flow sets status too.
-      const status =
-        event.type === "payment_intent.succeeded"
-          ? "CAPTURED"
-          : event.type === "payment_intent.canceled"
-            ? "CANCELED"
-            : "FAILED";
+      const status = intentChargeStatus(pi);
+      // Never move a settled charge backwards (events can arrive out of order).
+      if (
+        ["CAPTURED", "REFUNDED", "PARTIALLY_REFUNDED", "DISPUTED", "WAIVED"].includes(charge.status)
+      )
+        return;
+      // A PENDING charge belongs to an attempt in flight; only a success may settle it here.
+      if (charge.status === "PENDING" && status !== "CAPTURED") return;
       await prisma.charge.update({
         where: { id: charge.id },
         data: {

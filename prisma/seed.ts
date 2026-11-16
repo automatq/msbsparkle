@@ -402,6 +402,15 @@ async function seedChecklists(organizationId: string) {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    // Never create a production super admin with the well-known dev password.
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD ?? "";
+    if (!email || password.length < 12 || password === "admin12345!")
+      throw new Error(
+        "Production seed needs SEED_ADMIN_EMAIL and a SEED_ADMIN_PASSWORD of at least 12 characters.",
+      );
+  }
   const org = await prisma.organization.upsert({
     where: { slug: ORG_SLUG },
     update: {},

@@ -83,6 +83,24 @@ export function paymentFailedTemplate(d: {
   return { subject, html, text, sms };
 }
 
+export function paymentActionTemplate(d: {
+  brand: string;
+  firstName: string;
+  when: string;
+  amountCents: number;
+  confirmUrl: string;
+}): Msg {
+  const subject = `Please confirm the payment for your ${d.when} clean`;
+  const text = `Hi ${d.firstName}, your bank needs you to confirm the ${formatCents(d.amountCents)} payment for your clean on ${d.when}. Confirm it here: ${d.confirmUrl}`;
+  const html = wrap(
+    "Your bank needs a quick confirmation",
+    `<p>Your bank asked you to confirm the <b>${formatCents(d.amountCents)}</b> payment for your clean on ${esc(d.when)}. It only takes a moment.</p>${btn(d.confirmUrl, "Confirm payment")}`,
+    d.brand,
+  );
+  const sms = `${d.brand}: your bank needs you to confirm the ${formatCents(d.amountCents)} payment for your ${d.when} clean: ${d.confirmUrl}`;
+  return { subject, html, text, sms };
+}
+
 export function receiptTemplate(d: {
   brand: string;
   firstName: string;

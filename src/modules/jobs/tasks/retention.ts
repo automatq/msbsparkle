@@ -1,8 +1,7 @@
-import { unlink } from "node:fs/promises";
-import path from "node:path";
 import type { ActorType } from "@/generated/prisma/enums";
 import { prisma } from "@/modules/db/client";
 import { pruneRateLimits } from "@/modules/shared/rate-limit";
+import { deleteObject } from "@/modules/storage";
 
 export const PHOTO_RETENTION_DAYS = 90;
 
@@ -16,7 +15,7 @@ export async function runRetention(
     select: { id: true, storageKey: true },
   });
   for (const p of photos) {
-    await unlink(path.join(process.cwd(), "uploads", p.storageKey)).catch(() => {});
+    await deleteObject(p.storageKey);
     await prisma.jobPhoto.delete({ where: { id: p.id } });
   }
   const rateLimitRowsPruned = await pruneRateLimits(now);

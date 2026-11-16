@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StatusBadge } from "@/components/admin/ui";
 import { AddCard } from "@/components/customer/add-card";
 import { DefaultCardButton } from "@/components/customer/panels";
@@ -64,6 +65,11 @@ export default async function PaymentPage() {
               <span className="flex items-center gap-2">
                 <span>{formatCents(c.amountCents)}</span>
                 <StatusBadge status={c.status} />
+                {c.status === "REQUIRES_ACTION" ? (
+                  <Link href={`/account/pay/${c.id}`} className="font-medium underline">
+                    Confirm
+                  </Link>
+                ) : null}
               </span>
             </li>
           ))}

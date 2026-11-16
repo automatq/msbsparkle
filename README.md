@@ -43,8 +43,20 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 
 - **Smart dispatch**: each job page ranks cleaners (preferred, history with the customer, availability, skills, conflicts, rating, daily load) with one-click assign; the dispatch board offers "Auto-assign" for a region day. Regions can switch capacity to `DERIVED` from cleaner availability.
 - **Admin 2FA**: `/admin/settings/security` enrols an authenticator app; codes are then required at sign-in. Needs a 32-byte base64 `AUTH_ENCRYPTION_KEY`.
-- **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP, sign-in codes 5/15 min per phone, magic links 5/15 min per email, admin login 10/15 min per email.
+- **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP; sign-in code requests 5/15 min and code guesses 5/15 min per phone; magic links 5/15 min per email; failed admin logins 10/15 min per email. Sign-in limits are enforced inside the Auth.js providers, so they also cover direct `/api/auth/*` calls. Checkout, bookings, gift cards and public forms are limited per IP.
 - **Retention**: photos are purged after 90 days (`retention` task, daily); super admins can delete a customer's personal data while keeping financial records.
+
+## Deploying (Vercel)
+
+1. Create a Postgres database (Neon, Supabase, …) and a **private** Vercel Blob store; link both to the project.
+2. Set every variable marked `[prod]` in `.env.example`. Missing ones are logged as `[config] … is not set` when the production server starts.
+3. Run migrations and the seed once against the production database:
+   `pnpm db:deploy && NODE_ENV=production pnpm db:seed` (needs `SEED_ADMIN_EMAIL` and a 12+ character `SEED_ADMIN_PASSWORD`; no demo data is created).
+4. Stripe: add a webhook endpoint for `https://<domain>/api/webhooks/stripe` (events: `setup_intent.succeeded`, `payment_method.detached`, `payment_intent.*`, `charge.refunded`, `charge.dispute.created`, `checkout.session.completed`).
+5. Inngest: install the Vercel integration (or set the keys) and sync `https://<domain>/api/inngest`. Inngest is required: it charges completed visits and sends reminders.
+6. Sign in at `/admin/login` and enrol 2FA at `/admin/settings/security`.
+
+Job photos are stored privately and served only through `/api/uploads/…` to admins of the region, the assigned cleaners and the customer.
 
 ## Scripts
 
