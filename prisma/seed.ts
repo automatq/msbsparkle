@@ -1,5 +1,9 @@
-/* Idempotent seed: organization, tax rates, regions + FSAs + windows + capacity,
- * services, extras, default pricing table, super admin, and (dev only) demo data. */
+/* Idempotent seed, safe to run on every deploy.
+ * - Always: the organization (existing or new, named after NEXT_PUBLIC_BRAND_NAME) and the generic
+ *   catalog (services, extras, checklists, default price sheet).
+ * - Development/CI only (NODE_ENV !== "production", SEED_DEMO !== "0"): the MSB Sparkle demo
+ *   company with regions, taxes, a super admin and sample cleaners/customers.
+ * Production admins are created through /setup, never by the seed. */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -11,7 +15,6 @@ import { currency } from "../src/modules/shared/country";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-const ORG_SLUG = "msb-sparkle";
 const FSA_LETTERS = "ABCEGHJKLMNPRSTVWXYZ".split(""); // valid 3rd chars of an FSA (no D,F,I,O,Q,U)
 
 type RegionSeed = {
@@ -403,59 +406,54 @@ async function seedChecklists(organizationId: string) {
 }
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    // Never create a production super admin with the well-known dev password.
-    const email = process.env.SEED_ADMIN_EMAIL;
-    const password = process.env.SEED_ADMIN_PASSWORD ?? "";
-    if (!email || password.length < 12 || password === "admin12345!")
-      throw new Error(
-        "Production seed needs SEED_ADMIN_EMAIL and a SEED_ADMIN_PASSWORD of at least 12 characters.",
-      );
+  const org = await ensureOrganization();
+  await seedCatalog(org);
+  // The MSB Sparkle demo company (regions, taxes, admin, sample cleaners and customers) is for
+  // local development and CI only. Real companies are set up through /setup.
+  const demo =
+    process.env.NODE_ENV !== "production" &&
+    !process.env.VERCEL && // never on a Vercel build, whatever NODE_ENV says
+    process.env.SEED_DEMO !== "0";
+  if (demo) {
+    await seedDemoCompany(org);
+    await seedDemo(org.id);
   }
-  const org = await prisma.organization.upsert({
-    where: { slug: ORG_SLUG },
-    update: {},
-    create: {
-      slug: ORG_SLUG,
-      name: "MSB Sparkle",
-      defaultCurrency: currency,
-      settings: {
-        supportEmail: "hello@msbsparkle.ca",
-        supportPhone: "1-888-555-0199",
-        googleRating: 4.8,
-        googleReviewCount: 3135,
-      },
-    },
+  const hasAdmin = (await prisma.userRole.count({ where: { role: "SUPER_ADMIN" } })) > 0;
+  console.log(
+    demo
+      ? `Seeded ${org.name} with the demo company (${REGIONS.length} regions).`
+      : `Seeded ${org.name} catalog.${hasAdmin ? "" : " Finish setup at /setup to create the first admin."}`,
+  );
+}
+
+type Org = { id: string; slug: string; name: string };
+
+/**
+ * The deployment's single organization: the existing one, or a new one named after the brand.
+ * Never creates a second organization.
+ */
+async function ensureOrganization(): Promise<Org> {
+  const existing = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" } });
+  if (existing) return existing;
+  const name = process.env.NEXT_PUBLIC_BRAND_NAME || "MSB Sparkle";
+  const slug =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "company";
+  return prisma.organization.create({
+    data: { slug, name, defaultCurrency: currency, settings: {} },
   });
+}
 
-  // Tax rates (effective 2020-01-01, open ended)
-  const taxes: { province: string; name: string; rateBps: number }[] = [
-    { province: "ON", name: "HST", rateBps: 1300 },
-    { province: "AB", name: "GST", rateBps: 500 },
-    { province: "BC", name: "GST", rateBps: 500 },
-    { province: "BC", name: "PST", rateBps: 700 },
-  ];
-  for (const t of taxes) {
-    const existing = await prisma.taxRate.findFirst({
-      where: { province: t.province, name: t.name, effectiveTo: null },
-    });
-    if (!existing)
-      await prisma.taxRate.create({
-        data: { ...t, effectiveFrom: new Date("2020-01-01T00:00:00Z") },
-      });
-  }
-
+/** Generic catalog every company starts with: services, extras, checklists, default prices. */
+async function seedCatalog(org: Org) {
   // Services & extras
   for (const s of SERVICES) {
     await prisma.service.upsert({
       where: { organizationId_slug: { organizationId: org.id, slug: s.slug } },
-      update: {
-        name: s.name,
-        description: s.description,
-        pricingModel: s.pricingModel,
-        sortOrder: s.sortOrder,
-        isUpgrade: "isUpgrade" in s ? s.isUpgrade : false,
-      },
+      // Create-only: never overwrite edits made after the first deploy.
+      update: {},
       create: {
         organizationId: org.id,
         slug: s.slug,
@@ -470,13 +468,8 @@ async function main() {
   for (const [i, e] of EXTRAS.entries()) {
     await prisma.extra.upsert({
       where: { organizationId_slug: { organizationId: org.id, slug: e.slug } },
-      update: {
-        name: e.name,
-        defaultMinutes: e.minutes,
-        sortOrder: i,
-        unit: "unit" in e ? e.unit : "FIXED",
-        maxQty: "maxQty" in e ? e.maxQty : 1,
-      },
+      // Create-only: never overwrite edits made after the first deploy.
+      update: {},
       create: {
         organizationId: org.id,
         slug: e.slug,
@@ -507,6 +500,26 @@ async function main() {
         rates: { create: defaultRates() },
       },
     });
+  }
+}
+
+/** The MSB Sparkle demo company: Canadian regions, taxes, cities, admin and a promo. */
+async function seedDemoCompany(org: Org) {
+  // Tax rates (effective 2020-01-01, open ended)
+  const taxes: { province: string; name: string; rateBps: number }[] = [
+    { province: "ON", name: "HST", rateBps: 1300 },
+    { province: "AB", name: "GST", rateBps: 500 },
+    { province: "BC", name: "GST", rateBps: 500 },
+    { province: "BC", name: "PST", rateBps: 700 },
+  ];
+  for (const t of taxes) {
+    const existing = await prisma.taxRate.findFirst({
+      where: { province: t.province, name: t.name, effectiveTo: null },
+    });
+    if (!existing)
+      await prisma.taxRate.create({
+        data: { ...t, effectiveFrom: new Date("2020-01-01T00:00:00Z") },
+      });
   }
 
   // Regions
@@ -653,12 +666,6 @@ async function main() {
       newCustomersOnly: true,
     },
   });
-
-  if (process.env.NODE_ENV !== "production") {
-    await seedDemo(org.id);
-  }
-
-  console.log(`Seeded org ${org.slug} with ${REGIONS.length} regions. Admin: ${adminEmail}`);
 }
 
 async function seedDemo(organizationId: string) {

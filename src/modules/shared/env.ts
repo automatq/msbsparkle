@@ -6,10 +6,10 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     AUTH_SECRET: z.string().min(1),
     AUTH_URL: z.string().url().optional(),
-    AUTH_ENCRYPTION_KEY: z.string().min(1),
+    AUTH_ENCRYPTION_KEY: z.string().min(1).optional(), // derived from AUTH_SECRET when unset
     SEED_ADMIN_EMAIL: z.string().email().optional(),
     SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
-    EMAIL_FROM: z.string().min(1),
+    EMAIL_FROM: z.string().min(1).optional(), // defaults to "<brand> <onboarding@resend.dev>"
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().optional(),
     RESEND_API_KEY: z.string().optional(),
@@ -26,7 +26,7 @@ export const env = createEnv({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
   client: {
-    NEXT_PUBLIC_APP_URL: z.string().url(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(), // defaults to the Vercel production URL
     NEXT_PUBLIC_BRAND_NAME: z.string().default("MSB Sparkle"),
     NEXT_PUBLIC_COUNTRY: z.enum(["CA", "US"]).default("CA"),
     NEXT_PUBLIC_CURRENCY: z.string().length(3).optional(),

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { brandName } from "@/modules/shared/site";
 export const metadata: Metadata = { title: "Privacy" };
 export default function PrivacyPage() {
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+  const brand = brandName;
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 space-y-4 text-sm text-muted-foreground">
       <h1 className="text-3xl font-semibold tracking-tight text-foreground">Privacy policy</h1>

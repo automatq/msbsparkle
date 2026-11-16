@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { brandName } from "@/modules/shared/site";
 
 export default function manifest(): MetadataRoute.Manifest {
-  const name = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+  const name = brandName;
   return {
     name: `${name} Cleaner`,
     short_name: name,

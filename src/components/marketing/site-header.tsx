@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { country } from "@/modules/shared/country";
+import { brandName } from "@/modules/shared/site";
 
-const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+const brand = brandName;
 
 export function SiteHeader() {
   return (

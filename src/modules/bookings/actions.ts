@@ -18,6 +18,7 @@ import { emit } from "@/modules/jobs/client";
 import { allowIp, clientIp, rateLimit } from "@/modules/shared/rate-limit";
 import { createBooking } from "./create-booking";
 import { confirmBookingSchema, contactSchema, type ConfirmBookingInput } from "./schemas";
+import { brandName, siteUrl } from "@/modules/shared/site";
 
 export type RegionLookupResult =
   | {
@@ -205,8 +206,8 @@ async function sendConfirmation(bookingId: string) {
     },
   });
   const job = booking.jobs[0];
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const brand = brandName;
+  const appUrl = siteUrl;
   const settings = (
     await prisma.organization.findUniqueOrThrow({ where: { id: booking.organizationId } })
   ).settings as { supportPhone?: string };

@@ -9,7 +9,7 @@ cp .env.example .env            # then set AUTH_SECRET and AUTH_ENCRYPTION_KEY (
 docker compose up -d            # Postgres on :5432, Mailpit UI on :8025
 pnpm install
 pnpm db:migrate                 # apply migrations
-pnpm db:seed                    # regions, pricing, admin user, demo data
+pnpm db:seed                    # catalog + the MSB Sparkle demo company (regions, admin, demo data)
 pnpm dev                        # http://localhost:3000
 ```
 
@@ -46,17 +46,11 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 - **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP; sign-in code requests 5/15 min and code guesses 5/15 min per phone; magic links 5/15 min per email; failed admin logins 10/15 min per email. Sign-in limits are enforced inside the Auth.js providers, so they also cover direct `/api/auth/*` calls. Checkout, bookings, gift cards and public forms are limited per IP.
 - **Retention**: photos are purged after 90 days (`retention` task, daily); super admins can delete a customer's personal data while keeping financial records.
 
-## Deploying (Vercel)
+## Deploying for a company
 
-1. Create a Postgres database (Neon, Supabase, …) and a **private** Vercel Blob store; link both to the project.
-2. Set every variable marked `[prod]` in `.env.example`. Missing ones are logged as `[config] … is not set` when the production server starts.
-3. Run migrations and the seed once against the production database:
-   `pnpm db:deploy && NODE_ENV=production pnpm db:seed` (needs `SEED_ADMIN_EMAIL` and a 12+ character `SEED_ADMIN_PASSWORD`; no demo data is created).
-4. Stripe: add a webhook endpoint for `https://<domain>/api/webhooks/stripe` (events: `setup_intent.succeeded`, `payment_method.detached`, `payment_intent.*`, `charge.refunded`, `charge.dispute.created`, `checkout.session.completed`).
-5. Inngest: install the Vercel integration (or set the keys) and sync `https://<domain>/api/inngest`. Inngest is required: it charges completed visits and sends reminders.
-6. Sign in at `/admin/login` and enrol 2FA at `/admin/settings/security`.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle&project-name=cleaning-booking&repository-name=cleaning-booking&env=AUTH_SECRET%2CNEXT_PUBLIC_BRAND_NAME%2CNEXT_PUBLIC_COUNTRY&envDefaults=%7B%22NEXT_PUBLIC_COUNTRY%22%3A%22CA%22%7D&envDescription=AUTH_SECRET%3A%20a%20long%20random%20string%20%28openssl%20rand%20-base64%2032%29%3B%20it%20is%20also%20your%20one-time%20setup%20key.%20NEXT_PUBLIC_BRAND_NAME%3A%20your%20company%20name.%20NEXT_PUBLIC_COUNTRY%3A%20CA%20or%20US.&envLink=https%3A%2F%2Fgithub.com%2Fautomatq%2Fmsbsparkle%2Fblob%2Fmain%2Fdocs%2FDEPLOY.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22private%22%7D%5D)
 
-Job photos are stored privately and served only through `/api/uploads/…` to admins of the region, the assigned cleaners and the customer.
+One deployment per company. The button provisions Postgres (Neon) and private photo storage (Vercel Blob) and asks for `AUTH_SECRET`, the brand name and the country (`CA` or `US`). Migrations and the starter catalog run automatically on production deploys. Then open `/setup` to create the first admin and region. Full guide: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Scripts
 

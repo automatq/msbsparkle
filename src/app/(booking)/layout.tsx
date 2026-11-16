@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { brandName } from "@/modules/shared/site";
 
-const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+const brand = brandName;
 
 export default function BookingLayout({ children }: LayoutProps<"/">) {
   return (

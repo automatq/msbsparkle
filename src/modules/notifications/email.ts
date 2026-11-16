@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { prisma } from "@/modules/db/client";
 import type { ActorType } from "@/generated/prisma/enums";
+import { emailFrom } from "@/modules/shared/site";
 
 export type EmailMessage = {
   to: string;
@@ -19,7 +20,7 @@ export type EmailMessage = {
 };
 
 async function deliver(msg: EmailMessage): Promise<string | null> {
-  const from = process.env.EMAIL_FROM ?? "MSB Sparkle <hello@localhost>";
+  const from = emailFrom();
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const res = await resend.emails.send({

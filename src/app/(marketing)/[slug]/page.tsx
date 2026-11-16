@@ -11,6 +11,7 @@ import {
   publicReviews,
 } from "@/modules/marketing/content";
 import { prisma } from "@/modules/db/client";
+import { brandName, siteUrl } from "@/modules/shared/site";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">): Promis
   const cs = citySlug(slug);
   const city = cs ? await cityBySlug(cs) : null;
   if (!city) return {};
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+  const brand = brandName;
   const title = city.seoTitle ?? `House Cleaning Services in ${city.name} | ${brand}`;
   const description =
     city.seoDescription ??
@@ -60,7 +61,7 @@ export default async function CityPage({ params }: PageProps<"/[slug]">) {
   ]);
   const faqs = (city.faqs as { q: string; a: string }[] | null) ?? [];
   const nearby = city.region.cities.filter((c) => c.id !== city.id);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = siteUrl;
   const pageUrl = `${appUrl}/house-cleaning-service-${city.slug}`;
   const ratingCount = reviews.length;
   const avg = ratingCount ? reviews.reduce((s, r) => s + r.rating, 0) / ratingCount : null;

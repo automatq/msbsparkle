@@ -23,6 +23,10 @@ const REQUIRED_IN_PRODUCTION: { name: string; why: string }[] = [
 
 const RECOMMENDED: { name: string; why: string }[] = [
   {
+    name: "EMAIL_FROM",
+    why: "emails come from Resend's test sender, which only delivers to your own Resend account address",
+  },
+  {
     name: "TWILIO_ACCOUNT_SID",
     why: "cleaner sign-in codes and reminders go by email instead of SMS",
   },

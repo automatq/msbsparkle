@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { prisma } from "@/modules/db/client";
 import { SERVICE_COPY, jsonLd } from "@/modules/marketing/content";
 import { currency } from "@/modules/shared/country";
+import { brandName } from "@/modules/shared/site";
 
 export const revalidate = 3600;
 
@@ -32,7 +33,7 @@ export default async function ServicePage({ params }: PageProps<"/services/[slug
   const s = await prisma.service.findFirst({ where: { slug, active: true } });
   if (!s) notFound();
   const copy = SERVICE_COPY[s.slug];
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+  const brand = brandName;
   const ld = {
     "@context": "https://schema.org",
     "@type": "Service",

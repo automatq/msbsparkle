@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/modules/db/client";
+import { siteUrl } from "@/modules/shared/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = siteUrl;
   const [cities, services] = await Promise.all([
     prisma.city.findMany({
       where: { active: true, region: { status: "ACTIVE" } },

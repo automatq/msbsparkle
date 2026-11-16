@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { prisma } from "@/modules/db/client";
 import { getCtx } from "./session";
 import { decryptSecret, encryptSecret, generateTotpSecret, totpUri, verifyTotp } from "./totp";
+import { brandName } from "@/modules/shared/site";
 
 export type TotpResult = { ok: true; message?: string } | { ok: false; message: string };
 
@@ -22,7 +23,7 @@ export async function startTotpEnrolmentAction(): Promise<
       where: { id: user.id },
       data: { totpSecret: encryptSecret(secret), totpEnabled: false },
     });
-    const uri = totpUri(secret, user.email, process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle");
+    const uri = totpUri(secret, user.email, brandName);
     return { ok: true, qrDataUrl: await QRCode.toDataURL(uri, { margin: 1, width: 200 }), secret };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Could not start enrolment" };

@@ -3,9 +3,10 @@ import { prisma } from "@/modules/db/client";
 import { sendEmail } from "./email";
 import { normalizePhone, sendSms } from "./sms";
 import type { Msg } from "./templates";
+import { brandName, siteUrl } from "@/modules/shared/site";
 
-export const brand = () => process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
-export const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export const brand = () => brandName;
+export const appUrl = () => siteUrl;
 
 type Target = {
   organizationId: string;

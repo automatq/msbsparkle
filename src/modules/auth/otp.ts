@@ -4,6 +4,7 @@ import { sendEmail } from "@/modules/notifications/email";
 import { isTwilioConfigured, normalizePhone, sendSms } from "@/modules/notifications/sms";
 import { clientIp, rateLimit } from "@/modules/shared/rate-limit";
 import { otpVerifyAllowed } from "./limits";
+import { brandName } from "@/modules/shared/site";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ACTIVE_CODES = 3;
@@ -55,7 +56,7 @@ export async function requestOtp(phoneInput: string): Promise<OtpRequestResult> 
       expires: new Date(Date.now() + OTP_TTL_MS),
     },
   });
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "MSB Sparkle";
+  const brand = brandName;
   const body = `${brand}: your sign-in code is ${code}. It expires in 10 minutes.`;
   if (isTwilioConfigured()) {
     await sendSms({

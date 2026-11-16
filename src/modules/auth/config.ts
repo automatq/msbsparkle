@@ -17,6 +17,7 @@ import { verifyOtp } from "./otp";
 import { verifyPassword } from "./password";
 import type { RoleClaim } from "./roles";
 import { decryptSecret, verifyTotp } from "./totp";
+import { emailFrom } from "@/modules/shared/site";
 
 const ROLES_TTL_MS = 15 * 60 * 1000;
 
@@ -48,7 +49,7 @@ async function loadRoles(
 
 function emailProvider() {
   if (process.env.RESEND_API_KEY) {
-    const opts = { apiKey: process.env.RESEND_API_KEY, from: process.env.EMAIL_FROM };
+    const opts = { apiKey: process.env.RESEND_API_KEY, from: emailFrom() };
     const send = Resend(opts).sendVerificationRequest;
     return Resend({ ...opts, sendVerificationRequest: throttled(send) });
   }
@@ -58,7 +59,7 @@ function emailProvider() {
       port: Number(process.env.SMTP_PORT ?? 1025),
       secure: false,
     },
-    from: process.env.EMAIL_FROM,
+    from: emailFrom(),
   };
   const send = Nodemailer(opts).sendVerificationRequest;
   return Nodemailer({ ...opts, sendVerificationRequest: throttled(send) });

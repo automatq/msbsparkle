@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/modules/db/client";
 import { normalizePhone } from "@/modules/notifications/sms";
+import { siteUrl } from "@/modules/shared/site";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const params: Record<string, string> = {};
   form.forEach((v, k) => (params[k] = String(v)));
-  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/webhooks/twilio`;
+  const url = `${siteUrl}/api/webhooks/twilio`;
   if (!validSignature(url, params, req.headers.get("x-twilio-signature")))
     return new Response("invalid signature", { status: 403 });
 

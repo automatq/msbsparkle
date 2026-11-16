@@ -148,3 +148,9 @@ test("quote API is rate limited per client", async ({ request }) => {
   }
   expect(limited).toBe(true);
 });
+
+test("first-run setup is gone once an admin exists", async ({ request }) => {
+  expect((await request.get("/setup")).status()).toBe(404);
+  const login = await request.get("/admin/login");
+  expect(await login.text()).not.toContain("Finish setup");
+});

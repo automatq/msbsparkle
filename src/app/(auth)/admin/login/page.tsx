@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn } from "@/modules/auth/config";
+import Link from "next/link";
+import { isSetupPending } from "@/modules/setup/setup";
 
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
   const params = await searchParams;
@@ -30,12 +32,22 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
     }
   }
 
+  const setupPending = await isSetupPending().catch(() => false);
   return (
     <form action={login} className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">Admin sign in</h1>
         <p className="text-sm text-muted-foreground">Staff and dispatch access.</p>
       </div>
+      {setupPending ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+          No admin account exists yet.{" "}
+          <Link href="/setup" className="font-medium underline">
+            Finish setup
+          </Link>{" "}
+          to create one.
+        </p>
+      ) : null}
       {error ? (
         <p className="text-sm text-destructive">
           {error === "RateLimited"

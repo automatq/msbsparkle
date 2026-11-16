@@ -8,6 +8,16 @@ export async function register() {
   const { required, recommended } = missingProductionConfig();
   for (const v of required) console.error(`[config] ${v.name} is not set: ${v.why}.`);
   for (const v of recommended) console.warn(`[config] ${v.name} is not set: ${v.why}.`);
+  try {
+    const [{ isSetupPending }, { siteUrl }] = await Promise.all([
+      import("@/modules/setup/setup"),
+      import("@/modules/shared/site"),
+    ]);
+    if (await isSetupPending())
+      console.warn(`[setup] No admin account yet. Finish setup at ${siteUrl}/setup`);
+  } catch {
+    // Database not reachable yet; /api/health will show it.
+  }
 }
 
 /**
