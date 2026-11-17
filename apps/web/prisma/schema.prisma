@@ -334,6 +334,7 @@ model Organization {
   auditLogs          AuditLog[]
   checklistTemplates ChecklistTemplate[]
   applications       CleanerApplication[]
+  webhookEndpoints   WebhookEndpoint[]
 }
 
 model Region {
@@ -1467,4 +1468,57 @@ model RateLimit {
   windowStart DateTime
   count       Int      @default(0)
   updatedAt   DateTime @updatedAt
+}
+
+// ───────────────────────── Outgoing webhooks ─────────────────────────
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+/// A URL in the company's own systems that receives signed event notifications.
+model WebhookEndpoint {
+  id              String   @id @default(cuid())
+  organizationId  String
+  url             String
+  description     String?
+  /// Event types to send; empty means every event.
+  events          String[] @default([])
+  /// Signing secret ("whsec_..."), encrypted at rest.
+  secretEncrypted String
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+/// One event for one endpoint. Written in the same transaction as the change it reports.
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  /// Stable message id sent as `webhook-id`, the same on every retry.
+  messageId      String
+  /// Deduplicates the same event recorded twice (e.g. our refund and Stripe's refund webhook).
+  eventKey       String
+  eventType      String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  nextAttemptAt  DateTime?             @default(now())
+  lastStatusCode Int?
+  lastError      String?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@unique([endpointId, eventKey])
+  @@index([status, nextAttemptAt])
+  @@index([endpointId, createdAt])
 }

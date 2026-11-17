@@ -2,6 +2,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
+import { jobPayload } from "@/modules/webhooks/payloads";
+import { recordWebhookEvent } from "@/modules/webhooks/queue";
 import { emit } from "@/modules/jobs/client";
 
 export type AssignmentConflict = { jobId: string; bookingNumber: string; start: Date; end: Date };
@@ -270,7 +272,7 @@ export async function rescheduleJob(
         detached: true,
       },
     });
-    await tx.jobEvent.create({
+    const rescheduled = await tx.jobEvent.create({
       data: {
         jobId: job.id,
         type: "RESCHEDULED",
@@ -282,6 +284,12 @@ export async function rescheduleJob(
           warnings,
         } as Prisma.InputJsonValue,
       },
+    });
+    await recordWebhookEvent(tx, {
+      organizationId: job.organizationId,
+      type: "job.rescheduled",
+      key: `job.rescheduled:${rescheduled.id}`,
+      data: async (db) => ({ ...(await jobPayload(db, job.id)), previousStartAt }),
     });
   });
   if (job.assignments.length && start.toISOString() !== previousStartAt)

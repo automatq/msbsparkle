@@ -56,6 +56,11 @@ analytics. Any site may embed it by default; set `EMBED_ALLOWED_ORIGINS` (space-
 e.g. `https://acme.com https://www.acme.com`) and redeploy to allow only the company's own site.
 All other pages refuse to be framed.
 
+## Send events to other systems
+
+**Admin → Webhooks** sends bookings, visits and payments to the company's CRM, accounting, Zapier
+or its own app as signed JSON requests. See [WEBHOOKS.md](WEBHOOKS.md).
+
 ## 4. Connect the services that make it a real business
 
 Add these in **Vercel → Project → Settings → Environment Variables** (Production), then redeploy.

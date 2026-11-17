@@ -17,7 +17,7 @@ import {
   unassignAction,
 } from "@/modules/admin/actions";
 import type { JobStatus } from "@/generated/prisma/enums";
-import { JOB_TRANSITIONS } from "@/modules/jobs/state-machine";
+import { JOB_TRANSITIONS } from "@/modules/jobs/transitions";
 import { ActionButton } from "./ui";
 
 type Cleaner = { id: string; name: string };

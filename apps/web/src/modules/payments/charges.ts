@@ -3,6 +3,7 @@ import type { Charge } from "@/generated/prisma/client";
 import { prisma } from "@/modules/db/client";
 import type { Actor } from "@/modules/jobs/state-machine";
 import { getStripe } from "./stripe";
+import { recordPaymentEvent } from "@/modules/webhooks/queue";
 import { currency } from "@/modules/shared/country";
 
 export type ChargeResult =
@@ -104,6 +105,7 @@ export async function createServiceCharge(
         data: { chargeId: charge.id, status: "CAPTURED", giftCardCents: charge.giftCardCents },
       },
     });
+    await recordPaymentEvent(prisma, charge.id, "payment.succeeded");
     return { ok: true, chargeId: charge.id, status: "CAPTURED" };
   }
   // Charge the card recorded on the claimed row: a replayed attempt must send exactly the same
@@ -160,6 +162,7 @@ export async function createServiceCharge(
         data: { chargeId: charge.id, status: "FAILED", error: err.message },
       },
     });
+    await recordPaymentEvent(prisma, charge.id, "payment.failed");
     return { ok: false, code: "STRIPE_ERROR", message: err.message };
   }
 }
@@ -382,6 +385,12 @@ export async function recordIntentResult(
       data: { chargeId, status, paymentIntentId: pi.id },
     },
   });
+  if (status === "CAPTURED" || status === "FAILED")
+    await recordPaymentEvent(
+      prisma,
+      chargeId,
+      status === "CAPTURED" ? "payment.succeeded" : "payment.failed",
+    );
   if (status === "CAPTURED") return { ok: true, chargeId, status };
   if (status === "PENDING")
     return { ok: false, code: "IN_PROGRESS", message: "The payment is still processing." };
@@ -460,6 +469,9 @@ export async function refundCharge(
           data: { refundId: refund.id, amountCents, reason },
         },
       });
+    await recordPaymentEvent(prisma, chargeId, "payment.refunded", {
+      refundedCents: refunded + amountCents,
+    });
     return { ok: true as const, refundId: refund.id };
   } catch (e) {
     await prisma.refund.update({ where: { id: refund.id }, data: { status: "FAILED" } });

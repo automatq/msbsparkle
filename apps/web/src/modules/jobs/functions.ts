@@ -14,6 +14,7 @@ import { runReminders } from "./tasks/reminders";
 import { runRetention } from "./tasks/retention";
 import { runSeriesMaterialization } from "./tasks/series";
 import { timezone } from "@/modules/shared/country";
+import { deliverDue } from "@/modules/webhooks/deliver";
 
 const grace = () => `${Number(process.env.CHARGE_GRACE_MINUTES ?? 120)}m`;
 
@@ -98,6 +99,22 @@ export const retention = inngest.createFunction(
   async ({ step }) => step.run("purge", () => runRetention()),
 );
 
+/** Delivers recorded webhooks right away; one run at a time, extra flushes are coalesced. */
+export const webhooksFlush = inngest.createFunction(
+  {
+    id: "webhooks-flush",
+    triggers: [{ event: "webhooks/flush" }],
+    concurrency: { limit: 1 },
+    debounce: { period: "2s", timeout: "10s" },
+  },
+  async ({ step }) => step.run("deliver", () => deliverDue()),
+);
+/** Retries failed deliveries and catches any whose flush was missed. */
+export const webhooksSweep = inngest.createFunction(
+  { id: "webhooks-sweep", triggers: [{ cron: "*/5 * * * *" }] },
+  async ({ step }) => step.run("deliver", () => deliverDue()),
+);
+
 export const functions = [
   onBookingConfirmed,
   onJobAssigned,
@@ -111,4 +128,6 @@ export const functions = [
   adminDigest,
   retention,
   pushReceipts,
+  webhooksFlush,
+  webhooksSweep,
 ];

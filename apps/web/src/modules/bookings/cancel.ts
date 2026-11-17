@@ -3,6 +3,8 @@ import type { Actor } from "@/modules/jobs/state-machine";
 import { transitionJob } from "@/modules/jobs/state-machine";
 import { emit } from "@/modules/jobs/client";
 import { bpsOf } from "@/modules/shared/money";
+import { bookingPayload } from "@/modules/webhooks/payloads";
+import { recordWebhookEvent } from "@/modules/webhooks/queue";
 
 export function lateCancelFeeCents(
   region: { lateCancelFeeType: "FIXED" | "PERCENT"; lateCancelFeeValue: number },
@@ -71,7 +73,7 @@ export async function cancelJob(
         },
       });
     }
-    if (job.booking.frequency === "ONE_TIME")
+    if (job.booking.frequency === "ONE_TIME") {
       await tx.booking.update({
         where: { id: job.bookingId },
         data: {
@@ -80,6 +82,13 @@ export async function cancelJob(
           cancellationReason: opts.reason ?? null,
         },
       });
+      await recordWebhookEvent(tx, {
+        organizationId: job.organizationId,
+        type: "booking.cancelled",
+        key: `booking.cancelled:${job.bookingId}`,
+        data: (db) => bookingPayload(db, job.bookingId),
+      });
+    }
   });
   if (job.assignments.length)
     await emit("job/cleaner-changed", {
@@ -101,14 +110,22 @@ export async function cancelBooking(bookingId: string, actor: Actor, reason?: st
   });
   for (const job of booking.jobs)
     await cancelJob(job.id, actor, { reason, waiveFee: actor.type === "ADMIN" });
-  await prisma.booking.update({
-    where: { id: bookingId },
-    data: {
-      status: "CANCELLED",
-      cancelledAt: new Date(),
-      cancellationReason: reason ?? null,
-      endsOn: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancellationReason: reason ?? null,
+        endsOn: new Date(),
+      },
+    });
+    await recordWebhookEvent(tx, {
+      organizationId: booking.organizationId,
+      type: "booking.cancelled",
+      key: `booking.cancelled:${bookingId}`,
+      data: (db) => bookingPayload(db, bookingId),
+    });
   });
 }
 
