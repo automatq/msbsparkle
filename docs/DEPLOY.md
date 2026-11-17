@@ -87,6 +87,8 @@ Then add the company's domain under **Settings → Domains**. Links in emails us
 - **Country, currency, locale, timezone:** `NEXT_PUBLIC_COUNTRY`, plus optional `NEXT_PUBLIC_CURRENCY`,
   `NEXT_PUBLIC_LOCALE`, `NEXT_PUBLIC_TIMEZONE`. These are built into the site: change them only
   before launch, then redeploy.
+- **Booking numbers** start with the company's initials (`Acme Home Cleaning` → `AHC-7KQ2MX`). Set
+  `BOOKING_NUMBER_PREFIX` (1–4 letters or digits) to choose your own. Existing numbers keep theirs.
 - **Migrations on deploy:** `apps/web/scripts/deploy-db.mjs` runs `prisma migrate deploy` and the seed on
   **production** deployments only. Preview deployments skip it unless `MIGRATE_ON_PREVIEW=1`
   (use that only when each preview has its own Neon branch, so a pull request can never migrate
