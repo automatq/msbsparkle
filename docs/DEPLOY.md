@@ -61,6 +61,9 @@ All other pages refuse to be framed.
 **Admin → Webhooks** sends bookings, visits and payments to the company's CRM, accounting, Zapier
 or its own app as signed JSON requests. See [WEBHOOKS.md](WEBHOOKS.md).
 
+**Admin → API keys** gives the company's own apps read access to bookings, visits, customers
+and payments. See [API.md](API.md).
+
 ## 4. Connect the services that make it a real business
 
 Add these in **Vercel → Project → Settings → Environment Variables** (Production), then redeploy.
