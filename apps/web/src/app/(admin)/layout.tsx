@@ -1,26 +1,10 @@
-import Link from "next/link";
-import { requireRole } from "@/modules/auth/session";
+import "@mantine/core/styles.layer.css";
+import "@mantine/dates/styles.layer.css";
+import { AdminMantineProvider } from "@/components/admin/mantine/provider";
+import { AdminShell } from "@/components/admin/mantine/shell";
 import { signOut } from "@/modules/auth/config";
-import { Button } from "@/components/ui/button";
-
-const NAV = [
-  ["/admin", "Dashboard"],
-  ["/admin/calendar", "Calendar"],
-  ["/admin/jobs", "Jobs"],
-  ["/admin/bookings", "Bookings"],
-  ["/admin/customers", "Customers"],
-  ["/admin/cleaners", "Cleaners"],
-  ["/admin/regions", "Regions"],
-  ["/admin/pricing", "Pricing"],
-  ["/admin/taxes", "Taxes"],
-  ["/admin/payments", "Payments"],
-  ["/admin/promos", "Promos"],
-  ["/admin/applications", "Applicants"],
-  ["/admin/reports", "Reports"],
-  ["/admin/settings/embed", "Website widget"],
-  ["/admin/settings/webhooks", "Webhooks"],
-  ["/admin/settings/security", "Security"],
-] as const;
+import { requireRole } from "@/modules/auth/session";
+import { brandName } from "@/modules/shared/site";
 
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN", "REGION_ADMIN");
@@ -31,27 +15,16 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-56 flex-col border-r bg-muted/30 p-4 md:flex">
-        <p className="mb-6 font-semibold">Admin</p>
-        <nav className="flex flex-col gap-1 text-sm">
-          {NAV.map(([href, label]) => (
-            <Link key={href} href={href} className="rounded px-2 py-1.5 hover:bg-muted">
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto space-y-2 text-xs text-muted-foreground">
-          <p className="truncate">{ctx.email}</p>
-          <p>{ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}</p>
-          <form action={logout}>
-            <Button variant="outline" size="sm" type="submit">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <AdminMantineProvider>
+      <AdminShell
+        brand={brandName}
+        email={ctx.email}
+        scopeLabel={ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}
+        isSuperAdmin={ctx.isSuperAdmin}
+        logout={logout}
+      >
+        {children}
+      </AdminShell>
+    </AdminMantineProvider>
   );
 }
