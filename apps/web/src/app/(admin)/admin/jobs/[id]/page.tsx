@@ -1,5 +1,21 @@
+import {
+  Alert,
+  Anchor,
+  Divider,
+  Grid,
+  GridCol,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Timeline,
+  TimelineItem,
+  Title,
+} from "@mantine/core";
+import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   AssignPanel,
   CancelPanel,
@@ -9,9 +25,8 @@ import {
   StatusPanel,
   SuggestPanel,
   UnassignButton,
-} from "@/components/admin/job-panels";
-import { StatusBadge } from "@/components/admin/ui";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from "@/components/admin/mantine/job-detail";
+import { StatusPill } from "@/components/admin/mantine/status-badge";
 import { assertRegionAccess, requireRole } from "@/modules/auth/session";
 import { isLateCancel, lateCancelFeeCents } from "@/modules/bookings/cancel";
 import { prisma } from "@/modules/db/client";
@@ -22,6 +37,28 @@ import { dateColumnToLocalDate, formatInZone } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
 
 export const dynamic = "force-dynamic";
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Paper p="md">
+      <Title order={2} fz="md" fw={600} mb="sm">
+        {title}
+      </Title>
+      {children}
+    </Paper>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Text size="sm">
+      <Text span size="xs" c="dimmed">
+        {label}:
+      </Text>{" "}
+      {children}
+    </Text>
+  );
+}
 
 export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">) {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN", "REGION_ADMIN");
@@ -43,7 +80,11 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
   try {
     assertRegionAccess(ctx, job.regionId);
   } catch {
-    return <p className="text-destructive">You don&apos;t have access to this region.</p>;
+    return (
+      <Alert color="red" icon={<ShieldAlert size={18} />} title="No access">
+        You don&apos;t have access to this region.
+      </Alert>
+    );
   }
   const cleaners = await prisma.cleaner.findMany({
     where: {
@@ -56,6 +97,14 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
     ? []
     : await suggestCleaners(job.id);
   const active = job.assignments.filter((a) => ["ACCEPTED", "OFFERED"].includes(a.status));
+  const onJob = new Set(active.map((a) => a.cleanerId));
+  // Names for the timeline: anyone ever assigned, plus the region's active cleaners.
+  const names = new Map<string, string>([
+    ...cleaners.map((c) => [c.id, `${c.firstName} ${c.lastName}`] as const),
+    ...job.assignments.map(
+      (a) => [a.cleanerId, `${a.cleaner.firstName} ${a.cleaner.lastName}`] as const,
+    ),
+  ]);
   const addr = job.addressSnapshot as {
     line1: string;
     line2?: string | null;
@@ -70,10 +119,10 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
   const extras = job.extras as { slug: string; qty: number }[];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-start" gap="sm">
         <div>
-          <p className="text-xs text-muted-foreground">
+          <Text size="xs" c="dimmed">
             <Link href="/admin/jobs" className="hover:underline">
               Jobs
             </Link>{" "}
@@ -82,90 +131,98 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
               {job.booking.bookingNumber}
             </Link>{" "}
             / visit #{job.sequenceNumber}
-          </p>
-          <h1 className="text-2xl font-semibold">
+          </Text>
+          <Title order={1} fz={24} fw={600}>
             {formatInZone(job.scheduledStartAt, job.timezone, "EEEE, MMMM d")} ·{" "}
             {job.windowStartLocal}–{job.windowEndLocal}
-          </h1>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusBadge status={job.status} />
-            <StatusBadge status={job.paymentStatus} />
+          </Title>
+          <Group gap="xs" mt={6}>
+            <span data-testid="job-status" data-status={job.status}>
+              <StatusPill status={job.status} />
+            </span>
+            <span data-testid="job-payment-status" data-status={job.paymentStatus}>
+              <StatusPill status={job.paymentStatus} />
+            </span>
             {job.detached ? (
-              <span className="text-xs text-muted-foreground">edited individually</span>
+              <Text size="xs" c="dimmed">
+                edited individually
+              </Text>
             ) : null}
-          </div>
+          </Group>
         </div>
-        <div className="text-right text-sm">
-          <p className="text-2xl font-semibold">
+        <div style={{ textAlign: "right" }}>
+          <Text fz={24} fw={600} style={{ fontVariantNumeric: "tabular-nums" }}>
             {formatCents((job.activeQuote?.totalCents ?? 0) + job.tipCents)}
-          </p>
-          <p className="text-muted-foreground">
+          </Text>
+          <Text size="sm" c="dimmed">
             ~{Math.round((job.estimatedMinutes / 60) * 10) / 10}h · {job.region.name}
-          </p>
+          </Text>
         </div>
-      </div>
+      </Group>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cleaners</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {active.length === 0 ? <p className="text-sm text-amber-700">Unassigned</p> : null}
-              {active.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between rounded-lg border p-2 text-sm"
-                >
-                  <span>
-                    <Link
-                      href={`/admin/cleaners/${a.cleanerId}`}
-                      className="font-medium hover:underline"
-                    >
-                      {a.cleaner.firstName} {a.cleaner.lastName}
-                    </Link>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {a.role} · {a.status}
-                    </span>
-                    {a.checkInAt ? (
-                      <span className="ml-2 text-xs">
-                        in {formatInZone(a.checkInAt, job.timezone, "h:mm a")}
-                      </span>
-                    ) : null}
-                    {a.checkOutAt ? (
-                      <span className="ml-2 text-xs">
-                        out {formatInZone(a.checkOutAt, job.timezone, "h:mm a")}
-                      </span>
-                    ) : null}
-                  </span>
-                  {open ? <UnassignButton jobId={job.id} cleanerId={a.cleanerId} /> : null}
-                </div>
-              ))}
-              {open ? <SuggestPanel jobId={job.id} suggestions={suggestions} /> : null}
-              {open ? (
-                <AssignPanel
-                  jobId={job.id}
-                  cleaners={cleaners.map((c) => ({
-                    id: c.id,
-                    name: `${c.firstName} ${c.lastName}`,
-                  }))}
-                  assigned={active.map((a) => a.cleanerId)}
-                />
-              ) : null}
-            </CardContent>
-          </Card>
+      <Grid gap="lg">
+        <GridCol span={{ base: 12, lg: 8 }}>
+          <Stack gap="lg">
+            <Section title="Cleaners">
+              <Stack gap="sm">
+                {active.length === 0 ? (
+                  <Text size="sm" c="orange" fw={500}>
+                    Unassigned
+                  </Text>
+                ) : null}
+                {active.map((a) => (
+                  <Paper key={a.id} px="sm" py={8}>
+                    <Group justify="space-between" wrap="nowrap">
+                      <div>
+                        <Link
+                          href={`/admin/cleaners/${a.cleanerId}`}
+                          className="text-sm font-medium hover:underline"
+                        >
+                          {a.cleaner.firstName} {a.cleaner.lastName}
+                        </Link>
+                        <Text span size="xs" c="dimmed" ml="xs">
+                          {a.role.toLowerCase()} · {a.status.toLowerCase()}
+                        </Text>
+                        {a.checkInAt ? (
+                          <Text span size="xs" ml="xs">
+                            in {formatInZone(a.checkInAt, job.timezone, "h:mm a")}
+                          </Text>
+                        ) : null}
+                        {a.checkOutAt ? (
+                          <Text span size="xs" ml="xs">
+                            out {formatInZone(a.checkOutAt, job.timezone, "h:mm a")}
+                          </Text>
+                        ) : null}
+                      </div>
+                      {open ? <UnassignButton jobId={job.id} cleanerId={a.cleanerId} /> : null}
+                    </Group>
+                  </Paper>
+                ))}
+                {open ? (
+                  <SuggestPanel
+                    jobId={job.id}
+                    suggestions={suggestions.filter((x) => !onJob.has(x.id))}
+                  />
+                ) : null}
+                {open ? (
+                  <AssignPanel
+                    jobId={job.id}
+                    cleaners={cleaners.map((c) => ({
+                      id: c.id,
+                      name: `${c.firstName} ${c.lastName}`,
+                    }))}
+                    assigned={active.map((a) => a.cleanerId)}
+                  />
+                ) : null}
+              </Stack>
+            </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <StatusPanel jobId={job.id} status={job.status} />
-              {open ? (
-                <>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-muted-foreground">Reschedule</p>
+            <Section title="Status">
+              <Stack gap="md">
+                <StatusPanel jobId={job.id} status={job.status} />
+                {open ? (
+                  <>
+                    <Divider label="Reschedule" labelPosition="left" />
                     <ReschedulePanel
                       jobId={job.id}
                       date={dateColumnToLocalDate(job.scheduledDate)}
@@ -175,26 +232,19 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                       }
                       windows={job.region.windows.map((w) => ({ id: w.id, label: w.label }))}
                     />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-muted-foreground">Cancel</p>
+                    <Divider label="Cancel" labelPosition="left" />
                     <CancelPanel
                       jobId={job.id}
                       late={late}
                       feeCents={lateCancelFeeCents(job.region, job.activeQuote?.totalCents ?? 0)}
                       recurring={job.booking.frequency !== "ONE_TIME"}
                     />
-                  </div>
-                </>
-              ) : null}
-            </CardContent>
-          </Card>
+                  </>
+                ) : null}
+              </Stack>
+            </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <Section title="Payment">
               <PaymentPanel
                 jobId={job.id}
                 status={job.status}
@@ -210,132 +260,147 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                     .reduce((s, r) => s + r.amountCents, 0),
                 }))}
               />
-            </CardContent>
-          </Card>
+            </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <NotePanel jobId={job.id} />
-              <ul className="space-y-1 text-xs">
-                {job.events.map((e) => (
-                  <li key={e.id} className="flex gap-2">
-                    <span className="w-36 shrink-0 text-muted-foreground">
-                      {formatInZone(e.createdAt, job.timezone, "MMM d, h:mm a")}
-                    </span>
-                    <span className="w-28 shrink-0 font-medium">{e.type.replaceAll("_", " ")}</span>
-                    <span className="text-muted-foreground">
-                      {e.actorType.toLowerCase()} · {summarize(e.data as Record<string, unknown>)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+            <Section title="Timeline">
+              <Stack gap="md">
+                <NotePanel jobId={job.id} />
+                {job.events.length ? (
+                  <Timeline bulletSize={12} lineWidth={2}>
+                    {job.events.map((e) => (
+                      <TimelineItem
+                        key={e.id}
+                        title={
+                          <Text size="sm" fw={500}>
+                            {e.type.charAt(0) + e.type.slice(1).replaceAll("_", " ").toLowerCase()}
+                          </Text>
+                        }
+                      >
+                        <Text size="xs" c="dimmed">
+                          {formatInZone(e.createdAt, job.timezone, "MMM d, h:mm a")} ·{" "}
+                          {e.actorType.toLowerCase()}
+                        </Text>
+                        {summarize(e.data as Record<string, unknown>, names) ? (
+                          <Text size="sm">
+                            {summarize(e.data as Record<string, unknown>, names)}
+                          </Text>
+                        ) : null}
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                ) : null}
+              </Stack>
+            </Section>
+          </Stack>
+        </GridCol>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p>
+        <GridCol span={{ base: 12, lg: 4 }}>
+          <Stack gap="lg">
+            <Section title="Customer">
+              <Stack gap={4}>
                 <Link
                   href={`/admin/customers/${job.customerId}`}
-                  className="font-medium hover:underline"
+                  className="text-sm font-medium hover:underline"
                 >
                   {job.customer.firstName} {job.customer.lastName}
                 </Link>
-              </p>
-              <p className="text-muted-foreground">{job.customer.email}</p>
-              <p className="text-muted-foreground">{job.customer.phone}</p>
-              <p className="pt-2">
-                {addr.line1}
-                {addr.line2 ? `, ${addr.line2}` : ""}
-                <br />
-                {addr.city} {addr.postalCode}
-              </p>
-              {addr.entryInstructions ? (
-                <p className="pt-1">
-                  <span className="text-xs text-muted-foreground">Entry:</span>{" "}
-                  {addr.entryInstructions}
-                </p>
-              ) : null}
-              {addr.parkingInstructions ? (
-                <p>
-                  <span className="text-xs text-muted-foreground">Parking:</span>{" "}
-                  {addr.parkingInstructions}
-                </p>
-              ) : null}
-              {job.customerNotes ? (
-                <p className="pt-1">
-                  <span className="text-xs text-muted-foreground">Customer notes:</span>{" "}
-                  {job.customerNotes}
-                </p>
-              ) : null}
-              {job.internalNotes ? (
-                <p className="pt-1">
-                  <span className="text-xs text-muted-foreground">Internal:</span>{" "}
-                  {job.internalNotes}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Service</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">
-                {job.service.name}
-                {job.isFirstCleanUpgrade ? " (first-clean upgrade)" : ""}
-              </p>
-              <p className="text-muted-foreground">
-                {job.bedrooms} bd · {job.bathrooms.toString()} ba
-                {job.sqft ? ` · ${job.sqft} sq ft` : ""}
-              </p>
-              {extras.length ? (
-                <p className="text-muted-foreground">
-                  Extras:{" "}
-                  {extras.map((e) => `${e.slug}${e.qty > 1 ? ` ×${e.qty}` : ""}`).join(", ")}
-                </p>
-              ) : null}
-              <ul className="pt-2">
-                {lines.map((l, i) => (
-                  <li key={i} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{l.label}</span>
-                    <span>{formatCents(l.amountCents)}</span>
-                  </li>
-                ))}
-                <li className="flex justify-between border-t pt-1 font-medium">
-                  <span>Total</span>
-                  <span>{formatCents(job.activeQuote?.totalCents ?? 0)}</span>
-                </li>
-                {job.tipCents ? (
-                  <li className="flex justify-between text-xs">
-                    <span>Tip</span>
-                    <span>{formatCents(job.tipCents)}</span>
-                  </li>
+                <Anchor href={`mailto:${job.customer.email}`} size="sm" c="dimmed">
+                  {job.customer.email}
+                </Anchor>
+                {job.customer.phone ? (
+                  <Anchor href={`tel:${job.customer.phone}`} size="sm" c="dimmed">
+                    {job.customer.phone}
+                  </Anchor>
                 ) : null}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+                <Text size="sm" mt="xs">
+                  {addr.line1}
+                  {addr.line2 ? `, ${addr.line2}` : ""}
+                  <br />
+                  {addr.city} {addr.postalCode}
+                </Text>
+                {addr.entryInstructions ? (
+                  <Field label="Entry">{addr.entryInstructions}</Field>
+                ) : null}
+                {addr.parkingInstructions ? (
+                  <Field label="Parking">{addr.parkingInstructions}</Field>
+                ) : null}
+                {job.customerNotes ? (
+                  <Field label="Customer notes">{job.customerNotes}</Field>
+                ) : null}
+                {job.internalNotes ? <Field label="Internal">{job.internalNotes}</Field> : null}
+              </Stack>
+            </Section>
+
+            <Section title="Service">
+              <Stack gap={4}>
+                <Text size="sm" fw={500}>
+                  {job.service.name}
+                  {job.isFirstCleanUpgrade ? " (first-clean upgrade)" : ""}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {job.bedrooms} bd · {job.bathrooms.toString()} ba
+                  {job.sqft ? ` · ${job.sqft} sq ft` : ""}
+                </Text>
+                {extras.length ? (
+                  <Text size="sm" c="dimmed">
+                    Extras:{" "}
+                    {extras.map((e) => `${e.slug}${e.qty > 1 ? ` ×${e.qty}` : ""}`).join(", ")}
+                  </Text>
+                ) : null}
+                <Stack gap={2} mt="xs">
+                  {lines.map((l, i) => (
+                    <Group key={i} justify="space-between" gap="xs">
+                      <Text size="xs" c="dimmed">
+                        {l.label}
+                      </Text>
+                      <Text size="xs" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {formatCents(l.amountCents)}
+                      </Text>
+                    </Group>
+                  ))}
+                  <Divider my={4} />
+                  <Group justify="space-between">
+                    <Text size="sm" fw={600}>
+                      Total
+                    </Text>
+                    <Text size="sm" fw={600} style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {formatCents(job.activeQuote?.totalCents ?? 0)}
+                    </Text>
+                  </Group>
+                  {job.tipCents ? (
+                    <Group justify="space-between">
+                      <Text size="xs">Tip</Text>
+                      <Text size="xs">{formatCents(job.tipCents)}</Text>
+                    </Group>
+                  ) : null}
+                </Stack>
+              </Stack>
+            </Section>
+          </Stack>
+        </GridCol>
+      </Grid>
+    </Stack>
   );
 }
 
-function summarize(d: Record<string, unknown>): string {
+/** One line describing a job event, for the timeline. */
+function summarize(d: Record<string, unknown>, names: Map<string, string>): string {
+  const reason = d.reason ? ` (${d.reason})` : "";
   if (typeof d.note === "string") return d.note;
-  if (d.from && d.to) return `${d.from} → ${d.to}${d.reason ? ` (${d.reason})` : ""}`;
-  if (d.cleanerId)
-    return `cleaner ${String(d.cleanerId).slice(-6)}${d.status ? ` ${d.status}` : ""}${d.reason ? ` (${d.reason})` : ""}`;
-  if (d.after && typeof d.after === "object")
-    return `to ${(d.after as { scheduledDate?: string }).scheduledDate ?? ""} ${(d.after as { windowStartLocal?: string }).windowStartLocal ?? ""}`;
-  if (d.status) return String(d.status);
-  return Object.keys(d).length ? JSON.stringify(d).slice(0, 80) : "";
+  if (d.from && d.to) return `${d.from} → ${d.to}${reason}`;
+  if (d.to) return `→ ${d.to}${reason}`;
+  if (d.cleanerId) {
+    const who = names.get(String(d.cleanerId)) ?? `cleaner …${String(d.cleanerId).slice(-6)}`;
+    const status = typeof d.status === "string" ? ` ${d.status.toLowerCase()}` : "";
+    return `${who}${status}${reason}`;
+  }
+  if (d.after && typeof d.after === "object") {
+    const a = d.after as { scheduledDate?: string; windowStartLocal?: string };
+    return `to ${a.scheduledDate ?? ""} ${a.windowStartLocal ?? ""}`.trim();
+  }
+  if (typeof d.chargeId === "string" && d.status) return `charge ${String(d.status).toLowerCase()}`;
+  if (typeof d.refundId === "string" && typeof d.amountCents === "number")
+    return `refund ${formatCents(d.amountCents)}${reason}`;
+  if (d.status) return String(d.status).toLowerCase();
+  return "";
 }

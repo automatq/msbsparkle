@@ -62,7 +62,7 @@ test("job page ranks cleaners with reasons and one-click assign works", async ({
   await expect(suggestions.first()).toContainText(/available|free that day|served this customer/);
   await suggestions.first().getByRole("button", { name: "Assign" }).click();
   await expect(page.getByText("Done").first()).toBeVisible();
-  await expect(page.locator("main").getByText("ASSIGNED", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("job-status")).toHaveAttribute("data-status", "ASSIGNED");
 });
 
 test("auto-assign fills unassigned jobs for a region day from the dispatch board", async ({
