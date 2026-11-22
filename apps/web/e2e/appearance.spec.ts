@@ -22,6 +22,10 @@ test("admin dark mode switches both UIs, persists, and never leaks to the public
   await page.getByTestId("color-scheme-toggle").click();
   await page.getByRole("menuitem", { name: "Dark" }).click();
   await expect.poll(() => scheme(page)).toEqual({ mantine: "dark", dark: true });
+  // The toggle shows only the icon for the current scheme.
+  const toggle = page.getByTestId("color-scheme-toggle");
+  await expect(toggle.locator("svg.lucide-moon")).toBeVisible();
+  await expect(toggle.locator("svg.lucide-sun")).toBeHidden();
   // Tailwind (legacy) pages pick it up too: the body uses the dark --background.
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bg).not.toBe("rgb(255, 255, 255)");

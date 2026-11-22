@@ -53,10 +53,10 @@ export function ColorSchemeToggle() {
           >
             {/* Both icons, shown by CSS from the scheme attribute the inline script sets before
                 paint: correct at once, and server and client render the same markup. */}
-            <Box component="span" darkHidden display="flex">
+            <Box component="span" darkHidden lh={0}>
               <Sun size={16} strokeWidth={1.75} />
             </Box>
-            <Box component="span" lightHidden display="flex">
+            <Box component="span" lightHidden lh={0}>
               <Moon size={16} strokeWidth={1.75} />
             </Box>
           </ActionIcon>
