@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useSyncExternalStore } from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -10,12 +10,24 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
+/** Light unless the page has the .dark class (only the admin sets it, from its appearance menu). */
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => observer.disconnect();
+}
+const isDark = () => document.documentElement.classList.contains("dark");
+
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  const theme = useSyncExternalStore<"dark" | "light">(
+    subscribe,
+    () => (isDark() ? "dark" : "light"),
+    () => "light",
+  );
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

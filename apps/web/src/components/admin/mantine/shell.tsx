@@ -36,6 +36,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { ColorSchemeToggle } from "./color-scheme";
 
 type Item = { href: string; label: string; icon: LucideIcon; superAdmin?: boolean };
 
@@ -117,9 +118,12 @@ export function AdminShell({
               Admin
             </Text>
           </Group>
-          <Text size="sm" c="dimmed" truncate visibleFrom="sm">
-            {email}
-          </Text>
+          <Group gap="sm" wrap="nowrap">
+            <Text size="sm" c="dimmed" truncate visibleFrom="sm">
+              {email}
+            </Text>
+            <ColorSchemeToggle />
+          </Group>
         </Group>
       </AppShell.Header>
 

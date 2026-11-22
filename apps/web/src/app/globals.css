@@ -121,6 +121,17 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Dispatch board (FullCalendar) follows the light/dark tokens. */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--background);
+  --fc-neutral-bg-color: var(--muted);
+  --fc-neutral-text-color: var(--muted-foreground);
+  --fc-today-bg-color: color-mix(in oklch, var(--primary) 6%, transparent);
+  --fc-highlight-color: color-mix(in oklch, var(--primary) 12%, transparent);
+  --fc-non-business-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

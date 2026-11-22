@@ -173,7 +173,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/admin/jobs"
                     {j.assignments
                       .map((a) => `${a.cleaner.firstName} ${a.cleaner.lastName[0]}.`)
                       .join(", ") || (
-                      <Text span size="sm" c="orange.8" fw={500}>
+                      <Text span size="sm" c="orange" fw={500}>
                         Unassigned
                       </Text>
                     )}

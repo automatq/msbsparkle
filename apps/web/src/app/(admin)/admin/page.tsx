@@ -62,7 +62,7 @@ function Attention({
       className="block rounded-[var(--radius)] transition hover:shadow-sm"
       data-testid={testId}
     >
-      <Paper p="md" h="100%" bg={urgent ? "var(--mantine-color-orange-0)" : undefined}>
+      <Paper p="md" h="100%" bg={urgent ? "var(--mantine-color-orange-light)" : undefined}>
         <Group gap="sm" wrap="nowrap" align="flex-start">
           <ThemeIcon variant="light" color={urgent ? "orange" : "teal"} size="lg" radius="md">
             <Icon size={18} strokeWidth={1.75} />
