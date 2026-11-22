@@ -24,3 +24,9 @@ overrides:
   # Security: minimatch <11.0.1 ReDoS; ts-morph only uses the minimatch() named export, unchanged in v11.
   "@ts-morph/common>minimatch": ^11.0.8
   "@typescript-eslint/typescript-estree>minimatch": ^11.0.8
+  # Security: same minimatch advisory; @expo/fingerprint only uses the Minimatch class, unchanged in v11.
+  "@expo/fingerprint>minimatch": ^11.0.8
+  # Security: zod <4.6.6 memory exhaustion (GHSA via pnpm audit); same major.
+  "@vercel/cli-config>zod": ^4.6.7
+  # Security: effect <=3.22.0 ReDoS in Schema.TemplateLiteral (GHSA-7589-6fvf-x4pw); same major.
+  effect: ^3.22.1
