@@ -151,7 +151,11 @@ export default async function JobsPage({ searchParams }: PageProps<"/admin/jobs"
               {jobs.map((j) => (
                 <TableTr key={j.id}>
                   <TableTd style={{ whiteSpace: "nowrap" }}>
-                    <Link href={`/admin/jobs/${j.id}`} className="font-medium hover:underline">
+                    <Link
+                      href={`/admin/jobs/${j.id}`}
+                      className="font-medium hover:underline"
+                      data-date={dateColumnToLocalDate(j.scheduledDate)}
+                    >
                       {dateLabel(j.scheduledDate)}
                     </Link>
                     <Text size="xs" c="dimmed">

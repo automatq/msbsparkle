@@ -71,9 +71,7 @@ test("auto-assign fills unassigned jobs for a region day from the dispatch board
   const bookingNumber = await bookTorontoJob(page);
   await adminLogin(page);
   await page.goto(`/admin/jobs?from=2020-01-01&to=2030-01-01&q=${bookingNumber}`);
-  const when = (await page.locator("table tbody tr td a").first().textContent())!
-    .trim()
-    .split(" ")[0];
+  const when = (await page.locator("table tbody tr td a").first().getAttribute("data-date"))!;
   await page.goto("/admin/regions");
   const regionId = (await page.getByRole("link", { name: "Toronto" }).getAttribute("href"))!
     .split("/")
