@@ -1,6 +1,6 @@
 import { Code, Stack, Text, Title } from "@mantine/core";
-import { CopySnippet } from "@/components/admin/copy-snippet";
 import { ApiKeyTable, NewApiKey } from "@/components/admin/mantine/api-keys-panel";
+import { CodeSnippet } from "@/components/admin/mantine/code-snippet";
 import { PageHeader } from "@/components/admin/mantine/page-header";
 import { MAX_ACTIVE_KEYS } from "@/modules/api/keys";
 import { RATE_LIMIT_PER_MINUTE } from "@/modules/api/http";
@@ -59,7 +59,7 @@ export default async function ApiKeysPage() {
           servers only: never put one in a website or mobile app. The objects match the webhook
           payloads; the full reference is in docs/API.md.
         </Text>
-        <CopySnippet code={example} />
+        <CodeSnippet code={example} />
       </Stack>
     </Stack>
   );

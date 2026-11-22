@@ -1,24 +1,11 @@
 "use client";
 
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  Code,
-  CopyButton,
-  Group,
-  Paper,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
-import { Check, Copy, KeyRound } from "lucide-react";
+import { Button, Code, Group, Paper, Table, Text, TextInput } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createApiKeyAction, revokeApiKeyAction } from "@/modules/api/actions";
+import { ShowOnceSecret } from "./show-once-secret";
 
 export type ApiKeyView = {
   id: string;
@@ -39,40 +26,18 @@ export function NewApiKey({ disabled }: { disabled: boolean }) {
 
   if (key)
     return (
-      <Alert color="yellow" icon={<KeyRound size={18} />} title="Copy your key now">
-        <Stack gap="xs">
-          <Text size="sm">
-            This is the only time it&apos;s shown. Store it in your app&apos;s secrets; if it&apos;s
-            lost, revoke it and create a new one.
-          </Text>
-          <Group gap="xs" wrap="nowrap">
-            <Code block style={{ flex: 1, wordBreak: "break-all" }} data-testid="api-key-value">
-              {key}
-            </Code>
-            <CopyButton value={key}>
-              {({ copied, copy }) => (
-                <Tooltip label={copied ? "Copied" : "Copy"}>
-                  <ActionIcon variant="default" size="lg" onClick={copy} aria-label="Copy key">
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </CopyButton>
-          </Group>
-          <Group>
-            <Button
-              size="xs"
-              variant="default"
-              onClick={() => {
-                setKey(null);
-                router.refresh();
-              }}
-            >
-              I&apos;ve saved it
-            </Button>
-          </Group>
-        </Stack>
-      </Alert>
+      <ShowOnceSecret
+        title="Copy your key now"
+        secret={key}
+        testId="api-key-value"
+        onDone={() => {
+          setKey(null);
+          router.refresh();
+        }}
+      >
+        This is the only time it&apos;s shown. Store it in your app&apos;s secrets; if it&apos;s
+        lost, revoke it and create a new one.
+      </ShowOnceSecret>
     );
 
   return (

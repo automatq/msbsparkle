@@ -1,8 +1,12 @@
-import { CopySnippet } from "@/components/admin/copy-snippet";
-import { EndpointCard, NewEndpointForm } from "@/components/admin/webhook-panels";
+import { Anchor, Code, Stack, Text, Title } from "@mantine/core";
+import { CodeSnippet } from "@/components/admin/mantine/code-snippet";
+import { PageHeader } from "@/components/admin/mantine/page-header";
+import { EndpointCard, NewEndpointForm } from "@/components/admin/mantine/webhook-panels";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { MAX_ENDPOINTS } from "@/modules/webhooks/manage";
+
+export const dynamic = "force-dynamic";
 
 const VERIFY_SNIPPET = `// npm install standardwebhooks
 import { Webhook } from "standardwebhooks";
@@ -25,65 +29,62 @@ export default async function WebhooksPage() {
     include: { deliveries: { orderBy: { createdAt: "desc" }, take: 15 } },
   });
   return (
-    <div className="max-w-4xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Webhooks</h1>
-        <p className="text-sm text-muted-foreground">
-          Send bookings, visits and payments to your own systems (CRM, accounting, Zapier, Make, a
-          custom app) as they happen. Each event is a signed JSON <code>POST</code>; failed
-          deliveries are retried for about two days.
-        </p>
-      </div>
+    <Stack gap="xl" maw={960}>
+      <PageHeader
+        title="Webhooks"
+        description="Send bookings, visits and payments to your own systems (CRM, accounting, Zapier, Make, a custom app) as they happen. Each event is a signed JSON POST; failed deliveries are retried for about two days."
+      />
 
-      <section className="space-y-4">
-        {endpoints.map((e) => (
-          <EndpointCard
-            key={e.id}
-            endpoint={{
-              id: e.id,
-              url: e.url,
-              description: e.description,
-              events: e.events,
-              enabled: e.enabled,
-              deliveries: e.deliveries.map((d) => ({
-                id: d.id,
-                eventType: d.eventType,
-                status: d.status,
-                attempts: d.attempts,
-                lastStatusCode: d.lastStatusCode,
-                lastError: d.lastError,
-                createdAt: d.createdAt.toISOString(),
-                nextAttemptAt: d.nextAttemptAt?.toISOString() ?? null,
-              })),
-            }}
-          />
-        ))}
-      </section>
+      {endpoints.length ? (
+        <Stack gap="md">
+          {endpoints.map((e) => (
+            <EndpointCard
+              key={e.id}
+              endpoint={{
+                id: e.id,
+                url: e.url,
+                description: e.description,
+                events: e.events,
+                enabled: e.enabled,
+                deliveries: e.deliveries.map((d) => ({
+                  id: d.id,
+                  eventType: d.eventType,
+                  status: d.status,
+                  attempts: d.attempts,
+                  lastStatusCode: d.lastStatusCode,
+                  lastError: d.lastError,
+                  createdAt: d.createdAt.toISOString(),
+                  nextAttemptAt: d.nextAttemptAt?.toISOString() ?? null,
+                })),
+              }}
+            />
+          ))}
+        </Stack>
+      ) : null}
 
-      <section className="space-y-3">
-        <h2 className="font-medium">Add an endpoint</h2>
+      <Stack gap="sm">
+        <Title order={2} fz="md" fw={600}>
+          Add an endpoint
+        </Title>
         <NewEndpointForm disabled={endpoints.length >= MAX_ENDPOINTS} />
-      </section>
+      </Stack>
 
-      <section className="space-y-2">
-        <h2 className="font-medium">Verifying requests</h2>
-        <p className="text-sm text-muted-foreground">
+      <Stack gap="xs">
+        <Title order={2} fz="md" fw={600}>
+          Verifying requests
+        </Title>
+        <Text size="sm" c="dimmed">
           Requests follow the{" "}
-          <a
-            className="underline"
-            href="https://www.standardwebhooks.com"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <Anchor href="https://www.standardwebhooks.com" target="_blank" rel="noreferrer">
             Standard Webhooks
-          </a>{" "}
-          format: headers <code>webhook-id</code>, <code>webhook-timestamp</code> and{" "}
-          <code>webhook-signature</code>, so any Standard Webhooks library can check them. Reply
+          </Anchor>{" "}
+          format: headers <Code>webhook-id</Code>, <Code>webhook-timestamp</Code> and{" "}
+          <Code>webhook-signature</Code>, so any Standard Webhooks library can check them. Reply
           with a 2xx status within 10 seconds; anything else is retried. The same event can arrive
           more than once, and events can arrive out of order.
-        </p>
-        <CopySnippet code={VERIFY_SNIPPET} />
-      </section>
-    </div>
+        </Text>
+        <CodeSnippet code={VERIFY_SNIPPET} />
+      </Stack>
+    </Stack>
   );
 }
