@@ -211,3 +211,47 @@ test("admin creates a region, adds a service area and tax, and it starts taking 
   expect(res.data.region.name).toBe(`Dawson ${stamp}`);
   expect(res.data.quote.taxCents).toBeGreaterThan(0);
 });
+
+test("admin adds time off for a cleaner, revokes it, approves it again and removes it", async ({
+  page,
+}) => {
+  await login(page, "admin@msbsparkle.local");
+  await page.goto("/admin/cleaners");
+  // Sofia (Calgary) isn't used by the other specs, so her schedule stays predictable.
+  await page.getByRole("link", { name: /Sofia Marchetti/ }).click();
+  await page.waitForURL(/\/admin\/cleaners\/[^/]+$/);
+  await expect(page.getByText("Time off", { exact: true })).toBeVisible();
+
+  // Far enough out that no job exists; unique per run so reruns never collide.
+  const start = new Date(Date.now() + (300 + Math.floor(Math.random() * 300)) * 86_400_000);
+  const from = start.toISOString().slice(0, 10);
+  const to = new Date(start.getTime() + 86_400_000).toISOString().slice(0, 10);
+  await page.getByLabel("First day").fill(from);
+  await page.getByLabel("Last day").fill(to);
+  await page.getByLabel("Reason (optional)").fill("Family trip");
+  await page.getByTestId("time-off-add").click();
+  await expect(page.getByText("Time off added")).toBeVisible();
+
+  const row = page.locator('[data-testid^="time-off-"]', { hasText: `${from} → ${to}` });
+  await expect(row).toContainText("APPROVED");
+  await expect(row).toContainText("Family trip");
+
+  await row.getByRole("button", { name: "Revoke" }).click();
+  await expect(page.getByText("Time off denied")).toBeVisible();
+  await expect(row).toContainText("DENIED");
+
+  await row.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByText("Time off approved")).toBeVisible();
+  await expect(row).toContainText("APPROVED");
+
+  page.once("dialog", (d) => d.accept());
+  await row.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Time off removed")).toBeVisible();
+  await expect(row).toHaveCount(0);
+
+  // A last day before the first day is refused.
+  await page.getByLabel("First day").fill(to);
+  await page.getByLabel("Last day").fill(from);
+  await page.getByTestId("time-off-add").click();
+  await expect(page.getByText("The last day can't be before the first day.")).toBeVisible();
+});

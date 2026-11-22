@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingTimeOff } from "@/components/admin/time-off-panel";
 import { StatusBadge } from "@/components/admin/ui";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
+import { pendingTimeOff, timeOffDays } from "@/modules/scheduling/time-off";
 import { todayIn, localDateToDateColumn, addLocalDays } from "@/modules/shared/dates";
 import { timezone } from "@/modules/shared/country";
 
@@ -52,6 +54,7 @@ export default async function CleanersPage() {
     },
     orderBy: [{ status: "asc" }, { firstName: "asc" }],
   });
+  const requests = await pendingTimeOff(ctx);
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -60,6 +63,15 @@ export default async function CleanersPage() {
           Add cleaner
         </Link>
       </div>
+      <PendingTimeOff
+        rows={requests.map((t) => ({
+          id: t.id,
+          ...timeOffDays(t),
+          reason: t.reason,
+          status: t.status,
+          cleaner: { id: t.cleaner.id, name: `${t.cleaner.firstName} ${t.cleaner.lastName}` },
+        }))}
+      />
       <Table>
         <TableHeader>
           <TableRow>

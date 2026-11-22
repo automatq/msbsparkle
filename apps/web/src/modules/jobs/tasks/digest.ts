@@ -2,6 +2,7 @@ import { prisma } from "@/modules/db/client";
 import { sendEmail } from "@/modules/notifications/email";
 import { appUrl, brand } from "@/modules/notifications/send";
 import { adminDigestTemplate } from "@/modules/notifications/templates";
+import { countUnbilledVisits } from "./charges";
 import { addLocalDays, localDateToDateColumn, todayIn } from "@/modules/shared/dates";
 import { timezone } from "@/modules/shared/country";
 
@@ -16,7 +17,7 @@ export async function runAdminDigest(now = new Date()): Promise<{ recipients: nu
   for (const r of regions) {
     const today = todayIn(r.timezone, now);
     const yesterday = addLocalDays(today, -1);
-    const [jobs, unassigned, completedYesterday, failedPayments] = await Promise.all([
+    const [jobs, unassigned, completedYesterday, failedPayments, unbilled] = await Promise.all([
       prisma.job.count({
         where: {
           regionId: r.id,
@@ -39,8 +40,9 @@ export async function runAdminDigest(now = new Date()): Promise<{ recipients: nu
         },
       }),
       prisma.job.count({ where: { regionId: r.id, paymentStatus: "FAILED" } }),
+      countUnbilledVisits(r.id, now),
     ]);
-    rows.push({ region: r.name, jobs, unassigned, completedYesterday, failedPayments });
+    rows.push({ region: r.name, jobs, unassigned, completedYesterday, failedPayments, unbilled });
   }
   const admins = await prisma.user.findMany({
     where: { organizationId: org.id, status: "ACTIVE", roles: { some: { role: "SUPER_ADMIN" } } },

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getOptionalCtx } from "@/modules/auth/session";
 import { hasRole } from "@/modules/auth/roles";
-import { chargeCompletedJob, runPaymentRetries } from "@/modules/jobs/tasks/charges";
+import {
+  chargeCompletedJob,
+  runChargeSweep,
+  runPaymentRetries,
+} from "@/modules/jobs/tasks/charges";
 import { runCutoff } from "@/modules/jobs/tasks/cutoff";
 import { runAdminDigest } from "@/modules/jobs/tasks/digest";
 import { sendReviewRequest } from "@/modules/jobs/tasks/notify";
@@ -41,6 +45,8 @@ export async function POST(req: Request) {
       return NextResponse.json(await runSeriesMaterialization(now));
     case "retries":
       return NextResponse.json(await runPaymentRetries(now));
+    case "charge-sweep":
+      return NextResponse.json(await runChargeSweep(now));
     case "retention":
       return NextResponse.json(await runRetention(now));
     case "push-receipts":
@@ -64,6 +70,7 @@ export async function POST(req: Request) {
             "cutoff",
             "series",
             "retries",
+            "charge-sweep",
             "digest",
             "retention",
             "push-receipts",

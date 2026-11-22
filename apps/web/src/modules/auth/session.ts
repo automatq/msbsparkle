@@ -1,28 +1,10 @@
 import { redirect } from "next/navigation";
 import type { Role } from "@/generated/prisma/enums";
 import { auth } from "./config";
-import { hasRole, isSuperAdmin, scopedRegionIds, type RoleClaim } from "./roles";
+import { ForbiddenError, UnauthorizedError, type Ctx } from "./access";
+import { hasRole, isSuperAdmin, scopedRegionIds } from "./roles";
 
-export type Ctx = {
-  orgId: string;
-  userId: string;
-  email: string;
-  roles: RoleClaim[];
-  /** Empty means unrestricted (super admin). */
-  regionIds: string[];
-  isSuperAdmin: boolean;
-};
-
-export class UnauthorizedError extends Error {
-  constructor() {
-    super("Unauthorized");
-  }
-}
-export class ForbiddenError extends Error {
-  constructor(msg = "Forbidden") {
-    super(msg);
-  }
-}
+export { ForbiddenError, UnauthorizedError, assertRegionAccess, type Ctx } from "./access";
 
 export async function getOptionalCtx(): Promise<Ctx | null> {
   const session = await auth();
@@ -52,9 +34,4 @@ export async function requireRole(loginPath: string, ...allowed: Role[]): Promis
   if (!ctx) redirect(loginPath);
   if (allowed.length && !hasRole(ctx.roles, ...allowed)) redirect("/");
   return ctx;
-}
-
-export function assertRegionAccess(ctx: Ctx, regionId: string): void {
-  if (ctx.isSuperAdmin) return;
-  if (!ctx.regionIds.includes(regionId)) throw new ForbiddenError("No access to this region");
 }

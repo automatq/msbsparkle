@@ -3,6 +3,7 @@ import type { Actor } from "@/modules/jobs/state-machine";
 import { dateColumnToLocalDate, localDateToDateColumn, weekdayOf } from "@/modules/shared/dates";
 import { assignCleaner, effectiveEnd, findConflicts } from "./assignment";
 import { rankCleaners, type CandidateCleaner, type RankedCleaner } from "./ranking";
+import { approvedTimeOffOn } from "./time-off";
 
 const SKILL_FOR_SERVICE: Record<string, string> = {
   deep: "DEEP_CLEAN",
@@ -31,13 +32,8 @@ export async function suggestCleaners(jobId: string): Promise<RankedCleaner[]> {
       regions: true,
       skills: true,
       availability: { where: { weekday } },
-      timeOff: {
-        where: {
-          status: "APPROVED",
-          startsAt: { lte: job.scheduledEndAt },
-          endsAt: { gte: job.scheduledStartAt },
-        },
-      },
+      // By day, not by instant: time off is stored as whole UTC-midnight days.
+      timeOff: { where: approvedTimeOffOn(job.scheduledDate) },
       assignments: {
         where: {
           status: "ACCEPTED",

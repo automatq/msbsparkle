@@ -8,6 +8,7 @@ import {
 import { STALE_PENDING_MS, createServiceCharge } from "@/modules/payments/charges";
 import { isStripeConfigured } from "@/modules/payments/stripe";
 import { formatInZone } from "@/modules/shared/dates";
+import { sendReviewRequest } from "./notify";
 
 const RETRY_DELAYS_MS = [1, 3, 7].map((d) => d * 86_400_000);
 
@@ -141,4 +142,85 @@ export async function runPaymentRetries(now = new Date()): Promise<{ retried: nu
     retried++;
   }
   return { retried };
+}
+
+/** How long after completion a visit is normally charged (the job/completed handler waits this). */
+export const chargeGraceMs = () => Number(process.env.CHARGE_GRACE_MINUTES ?? 120) * 60_000;
+/** Extra time the normal path gets before the sweep steps in. */
+export const SWEEP_MARGIN_MS = 60 * 60_000;
+/**
+ * The sweep never reaches further back than this, so turning it on (or configuring Stripe later)
+ * can't suddenly bill old visits. Older unbilled visits show up in the admin digest instead.
+ */
+export const SWEEP_LOOKBACK_MS = 7 * 86_400_000;
+const SWEEP_BATCH = 200;
+
+/** Where clause for completed visits nobody has tried to charge. */
+function unchargedWhere(completedBefore: Date, completedAfter?: Date) {
+  return {
+    status: "COMPLETED" as const,
+    paymentStatus: "UNPAID" as const,
+    completedAt: { lte: completedBefore, ...(completedAfter ? { gte: completedAfter } : {}) },
+    charges: { none: { type: "SERVICE" as const } },
+  };
+}
+
+/**
+ * Completed visits that were never charged: no SERVICE charge exists although the grace period
+ * is long over. This happens when the job/completed event was lost (Inngest unreachable at
+ * check-out), because that event is the only thing that starts a charge.
+ */
+export async function findUnchargedCompletedJobs(now = new Date()): Promise<string[]> {
+  const jobs = await prisma.job.findMany({
+    where: unchargedWhere(
+      new Date(now.getTime() - chargeGraceMs() - SWEEP_MARGIN_MS),
+      new Date(now.getTime() - SWEEP_LOOKBACK_MS),
+    ),
+    select: { id: true },
+    orderBy: { completedAt: "asc" },
+    take: SWEEP_BATCH,
+  });
+  return jobs.map((j) => j.id);
+}
+
+/** Completed more than a day ago and still without any charge attempt (for the admin digest). */
+export async function countUnbilledVisits(regionId: string, now = new Date()): Promise<number> {
+  return prisma.job.count({
+    where: { regionId, ...unchargedWhere(new Date(now.getTime() - 86_400_000)) },
+  });
+}
+
+/**
+ * Safety net for lost job/completed events: charges visits found by
+ * {@link findUnchargedCompletedJobs} and sends their review request, exactly as the event handler
+ * would have. Safe to run alongside it: charging is idempotent per visit.
+ */
+export async function runChargeSweep(
+  now = new Date(),
+  deps: {
+    enabled?: boolean;
+    charge?: (jobId: string) => Promise<{ status: string }>;
+    afterCharge?: (jobId: string) => Promise<unknown>;
+  } = {},
+): Promise<{ swept: number; results: Record<string, number> }> {
+  const results: Record<string, number> = {};
+  if (!(deps.enabled ?? isStripeConfigured())) return { swept: 0, results };
+  const charge = deps.charge ?? chargeCompletedJob;
+  const afterCharge = deps.afterCharge ?? sendReviewRequest;
+  const ids = await findUnchargedCompletedJobs(now);
+  for (const jobId of ids) {
+    let status: string;
+    try {
+      status = (await charge(jobId)).status;
+      await afterCharge(jobId);
+    } catch (e) {
+      // One bad visit must not stop the rest; it is retried on the next run.
+      console.error(`[charge-sweep] job ${jobId} failed:`, e);
+      status = "error";
+    }
+    results[status] = (results[status] ?? 0) + 1;
+  }
+  if (ids.length)
+    console.warn(`[charge-sweep] recovered ${ids.length} uncharged visit(s)`, results);
+  return { swept: ids.length, results };
 }

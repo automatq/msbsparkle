@@ -11,7 +11,15 @@ import {
   zonedToInstant,
 } from "@/modules/shared/dates";
 import { STALE_PENDING_MS, claimServiceCharge } from "@/modules/payments/charges";
-import { chargeCompletedJob } from "./charges";
+import {
+  SWEEP_LOOKBACK_MS,
+  SWEEP_MARGIN_MS,
+  chargeCompletedJob,
+  chargeGraceMs,
+  countUnbilledVisits,
+  findUnchargedCompletedJobs,
+  runChargeSweep,
+} from "./charges";
 import { runCutoff } from "./cutoff";
 import { runReminders } from "./reminders";
 import { runSeriesMaterialization } from "./series";
@@ -200,6 +208,80 @@ describe.skipIf(!enabled)("background tasks (integration)", () => {
     });
     const res = await chargeCompletedJob(job.id);
     expect(res.status).toMatch(/^(skipped:no-stripe|charged|failed)/);
+  });
+
+  describe("sweep for completed visits that were never charged", () => {
+    const now = new Date();
+    const overdue = () => new Date(now.getTime() - chargeGraceMs() - SWEEP_MARGIN_MS - 60_000);
+
+    async function completedJob(completedAt: Date) {
+      const { job } = await seedBooking({ startInHours: 2 });
+      return prisma.job.update({
+        where: { id: job.id },
+        data: { status: "COMPLETED", completedAt },
+      });
+    }
+
+    it("finds a visit whose completion event was lost, and nothing else", async () => {
+      const lost = await completedJob(overdue());
+      const fresh = await completedJob(new Date(now.getTime() - 60_000)); // still in the grace period
+      const ancient = await completedJob(new Date(now.getTime() - SWEEP_LOOKBACK_MS - 3600_000));
+      const waived = await completedJob(overdue());
+      await prisma.job.update({ where: { id: waived.id }, data: { paymentStatus: "WAIVED" } });
+      const attempted = await completedJob(overdue());
+      await prisma.charge.create({
+        data: {
+          organizationId: attempted.organizationId,
+          customerId: attempted.customerId,
+          jobId: attempted.id,
+          type: "SERVICE",
+          amountCents: 15707,
+          cardCents: 15707,
+          idempotencyKey: `job:${attempted.id}:service:${attempted.activeQuoteId}`,
+          status: "FAILED",
+        },
+      });
+
+      const found = await findUnchargedCompletedJobs(now);
+      expect(found).toContain(lost.id);
+      for (const j of [fresh, ancient, waived, attempted]) expect(found).not.toContain(j.id);
+
+      // The one too old to charge automatically still surfaces in the admin digest.
+      expect(await countUnbilledVisits(ancient.regionId, now)).toBeGreaterThanOrEqual(1);
+    });
+
+    it("charges each one, sends the review request, and survives a failing visit", async () => {
+      const a = await completedJob(overdue());
+      const b = await completedJob(overdue());
+      const charged: string[] = [];
+      const reviewed: string[] = [];
+      const res = await runChargeSweep(now, {
+        enabled: true,
+        charge: async (jobId) => {
+          if (jobId === a.id) throw new Error("stripe is down");
+          charged.push(jobId);
+          return { status: "charged" };
+        },
+        afterCharge: async (jobId) => void reviewed.push(jobId),
+      });
+      expect(charged).toContain(b.id);
+      expect(reviewed).toContain(b.id);
+      expect(reviewed).not.toContain(a.id);
+      expect(res.swept).toBeGreaterThanOrEqual(2);
+      expect(res.results.error).toBeGreaterThanOrEqual(1);
+      expect(res.results.charged).toBeGreaterThanOrEqual(1);
+    });
+
+    it("does nothing while payments aren't configured", async () => {
+      await completedJob(overdue());
+      const charge = async () => {
+        throw new Error("must not be called");
+      };
+      expect(await runChargeSweep(now, { enabled: false, charge })).toEqual({
+        swept: 0,
+        results: {},
+      });
+    });
   });
 
   describe("service charge claiming", () => {

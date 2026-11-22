@@ -1,6 +1,11 @@
 import { inngest, type Events } from "./client";
 import { runPushReceipts } from "@/modules/notifications/push";
-import { chargeCompletedJob, runPaymentRetries } from "./tasks/charges";
+import {
+  chargeCompletedJob,
+  chargeGraceMs,
+  runChargeSweep,
+  runPaymentRetries,
+} from "./tasks/charges";
 import { runCutoff } from "./tasks/cutoff";
 import { runAdminDigest } from "./tasks/digest";
 import {
@@ -16,7 +21,7 @@ import { runSeriesMaterialization } from "./tasks/series";
 import { timezone } from "@/modules/shared/country";
 import { deliverDue } from "@/modules/webhooks/deliver";
 
-const grace = () => `${Number(process.env.CHARGE_GRACE_MINUTES ?? 120)}m`;
+const grace = () => `${Math.round(chargeGraceMs() / 60_000)}m`;
 
 export const onBookingConfirmed = inngest.createFunction(
   { id: "booking-confirmed", triggers: [{ event: "booking/confirmed" }] },
@@ -78,7 +83,12 @@ export const cutoff = inngest.createFunction(
 );
 export const paymentRetries = inngest.createFunction(
   { id: "payment-retries", triggers: [{ cron: "0 * * * *" }] },
-  async ({ step }) => step.run("retry", () => runPaymentRetries()),
+  async ({ step }) => {
+    const retries = await step.run("retry", () => runPaymentRetries());
+    // Visits whose job/completed event never arrived would otherwise never be charged.
+    const sweep = await step.run("sweep-uncharged", () => runChargeSweep());
+    return { ...retries, ...sweep };
+  },
 );
 export const materializeSeries = inngest.createFunction(
   { id: "materialize-series", triggers: [{ cron: "0 3 * * *" }] },
