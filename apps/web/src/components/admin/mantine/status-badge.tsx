@@ -2,6 +2,8 @@ import { Badge, type MantineColor } from "@mantine/core";
 
 const COLORS: Record<string, MantineColor> = {
   PENDING: "yellow",
+  ACTIVE: "teal",
+  PAUSED: "yellow",
   CONFIRMED: "blue",
   ASSIGNED: "indigo",
   EN_ROUTE: "violet",
@@ -17,9 +19,14 @@ const COLORS: Record<string, MantineColor> = {
   WAIVED: "gray",
   REFUNDED: "orange",
   PARTIALLY_REFUNDED: "orange",
+  CAPTURED: "teal",
+  REQUIRES_ACTION: "yellow",
+  FAILED_FINAL: "red",
+  CANCELED: "gray",
+  DISPUTED: "red",
 };
 
-/** Job and payment statuses as Mantine badges (Mantine pages; others use StatusBadge). */
+/** Booking, job, payment and charge statuses as Mantine badges (Mantine pages; others use StatusBadge). */
 export function StatusPill({ status }: { status: string }) {
   return (
     <Badge color={COLORS[status] ?? "gray"} variant="light" radius="sm" tt="none" fw={500}>
