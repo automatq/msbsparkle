@@ -1,6 +1,12 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { currency } from "@/modules/shared/country";
 
+/**
+ * Public JSON shapes for bookings, visits (jobs), payments and customers. Webhooks and the REST
+ * API (/api/v1) both use them, so an integration sees the same object either way. Each shape
+ * has an `include` for loading rows (one query for a whole list) and a `to…` mapper.
+ */
+
 /** Works inside or outside a transaction. */
 export type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -14,7 +20,7 @@ type CustomerRow = {
   email: string;
   phone: string | null;
 };
-const customerOf = (c: CustomerRow) => ({
+const customerRef = (c: CustomerRow) => ({
   id: c.id,
   firstName: c.firstName,
   lastName: c.lastName,
@@ -22,11 +28,16 @@ const customerOf = (c: CustomerRow) => ({
   phone: c.phone,
 });
 
-export async function bookingPayload(db: Db, bookingId: string) {
-  const b = await db.booking.findUniqueOrThrow({
-    where: { id: bookingId },
-    include: { customer: true, address: true, service: true, region: true },
-  });
+// ── Bookings ────────────────────────────────────────────────────────────────
+
+export const bookingInclude = {
+  customer: true,
+  address: true,
+  service: true,
+  region: true,
+} satisfies Prisma.BookingInclude;
+
+export function toBooking(b: Prisma.BookingGetPayload<{ include: typeof bookingInclude }>) {
   return {
     id: b.id,
     bookingNumber: b.bookingNumber,
@@ -37,7 +48,7 @@ export async function bookingPayload(db: Db, bookingId: string) {
     endsOn: b.endsOn ? dateOnly(b.endsOn) : null,
     service: { slug: b.service.slug, name: b.service.name },
     region: { slug: b.region.slug, name: b.region.name },
-    customer: customerOf(b.customer),
+    customer: customerRef(b.customer),
     address: {
       line1: b.address.line1,
       line2: b.address.line2,
@@ -51,24 +62,31 @@ export async function bookingPayload(db: Db, bookingId: string) {
     cancellationReason: b.cancellationReason,
     cancelledAt: iso(b.cancelledAt),
     createdAt: iso(b.createdAt),
+    updatedAt: iso(b.updatedAt),
   };
 }
 
-export async function jobPayload(db: Db, jobId: string) {
-  const j = await db.job.findUniqueOrThrow({
-    where: { id: jobId },
-    include: {
-      booking: { select: { bookingNumber: true, frequency: true } },
-      customer: true,
-      service: true,
-      region: true,
-      activeQuote: { select: { totalCents: true } },
-      assignments: {
-        where: { status: { in: ["OFFERED", "ACCEPTED"] } },
-        include: { cleaner: { select: { id: true, firstName: true } } },
-      },
-    },
-  });
+export async function bookingPayload(db: Db, bookingId: string) {
+  return toBooking(
+    await db.booking.findUniqueOrThrow({ where: { id: bookingId }, include: bookingInclude }),
+  );
+}
+
+// ── Visits (jobs) ───────────────────────────────────────────────────────────
+
+export const jobInclude = {
+  booking: { select: { bookingNumber: true, frequency: true } },
+  customer: true,
+  service: true,
+  region: true,
+  activeQuote: { select: { totalCents: true } },
+  assignments: {
+    where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+    include: { cleaner: { select: { id: true, firstName: true } } },
+  },
+} satisfies Prisma.JobInclude;
+
+export function toJob(j: Prisma.JobGetPayload<{ include: typeof jobInclude }>) {
   return {
     id: j.id,
     bookingId: j.bookingId,
@@ -82,7 +100,7 @@ export async function jobPayload(db: Db, jobId: string) {
     scheduledEndAt: iso(j.scheduledEndAt),
     service: { slug: j.service.slug, name: j.service.name },
     region: { slug: j.region.slug, name: j.region.name },
-    customer: customerOf(j.customer),
+    customer: customerRef(j.customer),
     address: j.addressSnapshot,
     cleaners: j.assignments.map((a) => ({
       id: a.cleaner.id,
@@ -98,18 +116,24 @@ export async function jobPayload(db: Db, jobId: string) {
     cancelledAt: iso(j.cancelledAt),
     cancellationType: j.cancellationType,
     cancellationReason: j.cancellationReason,
+    createdAt: iso(j.createdAt),
+    updatedAt: iso(j.updatedAt),
   };
 }
 
-export async function chargePayload(db: Db, chargeId: string) {
-  const c = await db.charge.findUniqueOrThrow({
-    where: { id: chargeId },
-    include: {
-      customer: true,
-      job: { select: { id: true, booking: { select: { bookingNumber: true } } } },
-      refunds: { where: { status: "SUCCEEDED" }, select: { amountCents: true } },
-    },
-  });
+export async function jobPayload(db: Db, jobId: string) {
+  return toJob(await db.job.findUniqueOrThrow({ where: { id: jobId }, include: jobInclude }));
+}
+
+// ── Payments (charges) ──────────────────────────────────────────────────────
+
+export const chargeInclude = {
+  customer: true,
+  job: { select: { id: true, booking: { select: { bookingNumber: true } } } },
+  refunds: { where: { status: "SUCCEEDED" }, select: { amountCents: true } },
+} satisfies Prisma.ChargeInclude;
+
+export function toPayment(c: Prisma.ChargeGetPayload<{ include: typeof chargeInclude }>) {
   return {
     id: c.id,
     type: c.type,
@@ -121,11 +145,45 @@ export async function chargePayload(db: Db, chargeId: string) {
     currency: c.currency,
     jobId: c.job?.id ?? null,
     bookingNumber: c.job?.booking.bookingNumber ?? null,
-    customer: customerOf(c.customer),
+    customer: customerRef(c.customer),
     failureCode: c.failureCode,
     failureMessage: c.failureMessage,
     attemptCount: c.attemptCount,
     capturedAt: iso(c.capturedAt),
     createdAt: iso(c.createdAt),
+    updatedAt: iso(c.updatedAt),
+  };
+}
+
+export async function chargePayload(db: Db, chargeId: string) {
+  return toPayment(
+    await db.charge.findUniqueOrThrow({ where: { id: chargeId }, include: chargeInclude }),
+  );
+}
+
+// ── Customers ───────────────────────────────────────────────────────────────
+
+export const customerInclude = {
+  addresses: { orderBy: { createdAt: "asc" } },
+} satisfies Prisma.CustomerInclude;
+
+export function toCustomer(c: Prisma.CustomerGetPayload<{ include: typeof customerInclude }>) {
+  return {
+    ...customerRef(c),
+    marketingOptIn: c.marketingOptIn,
+    smsOptOut: c.smsOptOut,
+    source: c.source,
+    tags: c.tags,
+    anonymized: !!c.anonymizedAt,
+    addresses: c.addresses.map((a) => ({
+      id: a.id,
+      line1: a.line1,
+      line2: a.line2,
+      city: a.city,
+      province: a.province,
+      postalCode: a.postalCode,
+    })),
+    createdAt: iso(c.createdAt),
+    updatedAt: iso(c.updatedAt),
   };
 }

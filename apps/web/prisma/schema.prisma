@@ -335,6 +335,7 @@ model Organization {
   checklistTemplates ChecklistTemplate[]
   applications       CleanerApplication[]
   webhookEndpoints   WebhookEndpoint[]
+  apiKeys            ApiKey[]
 }
 
 model Region {
@@ -1521,4 +1522,24 @@ model WebhookDelivery {
   @@unique([endpointId, eventKey])
   @@index([status, nextAttemptAt])
   @@index([endpointId, createdAt])
+}
+
+// ───────────────────────── Developer API ─────────────────────────
+
+/// A secret key for the read-only REST API (/api/v1). Only its SHA-256 hash is stored.
+model ApiKey {
+  id              String    @id @default(cuid())
+  organizationId  String
+  name            String
+  /// The key's first characters, shown in the admin to tell keys apart.
+  prefix          String
+  keyHash         String    @unique
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
 }

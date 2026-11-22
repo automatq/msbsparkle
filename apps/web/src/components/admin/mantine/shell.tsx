@@ -29,6 +29,7 @@ import {
   Users,
   UsersRound,
   Webhook,
+  KeyRound,
   type LucideIcon,
   ClipboardList,
 } from "lucide-react";
@@ -67,6 +68,7 @@ const NAV: { title: string; items: Item[] }[] = [
     items: [
       { href: "/admin/settings/embed", label: "Website widget", icon: CodeXml },
       { href: "/admin/settings/webhooks", label: "Webhooks", icon: Webhook, superAdmin: true },
+      { href: "/admin/settings/api-keys", label: "API keys", icon: KeyRound, superAdmin: true },
       { href: "/admin/settings/security", label: "Security", icon: ShieldCheck },
     ],
   },
