@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/admin/mantine/page-header";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 import { regionWhere } from "@/modules/db/scoped";
@@ -129,14 +130,10 @@ export default async function AdminDashboard() {
 
   return (
     <Stack gap="xl">
-      <div>
-        <Title order={1} fz={24} fw={600}>
-          Dashboard
-        </Title>
-        <Text size="sm" c="dimmed">
-          {ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}
-        </Text>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}
+      />
 
       <Stack gap="sm">
         <Title order={2} fz="md" fw={600}>

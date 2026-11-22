@@ -1,5 +1,4 @@
 import {
-  Group,
   Paper,
   Stack,
   Table,
@@ -10,11 +9,11 @@ import {
   TableThead,
   TableTr,
   Text,
-  Title,
 } from "@mantine/core";
 import Link from "next/link";
 import { Suspense } from "react";
 import { JobFilters } from "@/components/admin/mantine/job-filters";
+import { PageHeader } from "@/components/admin/mantine/page-header";
 import { StatusPill } from "@/components/admin/mantine/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import { visibleRegions } from "@/modules/admin/regions";
@@ -102,21 +101,19 @@ export default async function JobsPage({ searchParams }: PageProps<"/admin/jobs"
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between">
-        <div>
-          <Title order={1} fz={24} fw={600}>
-            Jobs
-          </Title>
-          <Text size="sm" c="dimmed">
-            {jobs.length === 300
-              ? "First 300 visits"
-              : `${jobs.length} visit${jobs.length === 1 ? "" : "s"}`}
-          </Text>
-        </div>
-        <Link href="/admin/bookings/new" className={buttonVariants({ size: "sm" })}>
-          New booking
-        </Link>
-      </Group>
+      <PageHeader
+        title="Jobs"
+        description={
+          jobs.length === 300
+            ? "First 300 visits"
+            : `${jobs.length} visit${jobs.length === 1 ? "" : "s"}`
+        }
+        actions={
+          <Link href="/admin/bookings/new" className={buttonVariants({ size: "sm" })}>
+            New booking
+          </Link>
+        }
+      />
 
       <Suspense>
         <JobFilters

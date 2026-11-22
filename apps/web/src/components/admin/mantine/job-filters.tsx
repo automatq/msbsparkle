@@ -7,6 +7,8 @@ import { CalendarDays, Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
+const statusLabel = (s: string) => s.charAt(0) + s.slice(1).replaceAll("_", " ").toLowerCase();
+
 /** Filters for the jobs list. Changes apply immediately and live in the URL, so they can be shared. */
 export function JobFilters({
   from,
@@ -64,7 +66,7 @@ export function JobFilters({
       <Select
         label="Status"
         placeholder="Any"
-        data={statuses.map((s) => ({ value: s, label: s.replaceAll("_", " ").toLowerCase() }))}
+        data={statuses.map((s) => ({ value: s, label: statusLabel(s) }))}
         value={status || null}
         onChange={(v) => apply({ status: v })}
         clearable

@@ -123,7 +123,7 @@ export function AdminShell({
 
       <AppShell.Navbar p="sm" aria-label="Admin">
         <AppShell.Section grow component={ScrollArea}>
-          <Stack gap="md">
+          <Stack gap="sm">
             {NAV.map((group) => {
               const items = group.items.filter((i) => !i.superAdmin || isSuperAdmin);
               return (
@@ -140,6 +140,9 @@ export function AdminShell({
                       leftSection={<Icon size={16} strokeWidth={1.75} />}
                       active={isActive(pathname, href)}
                       variant="light"
+                      color="gray"
+                      py={6}
+                      styles={{ label: { fontSize: "var(--mantine-font-size-sm)" } }}
                     />
                   ))}
                 </div>
