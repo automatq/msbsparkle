@@ -1,5 +1,6 @@
 import "@mantine/core/styles.layer.css";
 import "@mantine/dates/styles.layer.css";
+import { colorSchemeScript } from "@/components/admin/mantine/color-scheme-script";
 import { AdminMantineProvider } from "@/components/admin/mantine/provider";
 import { AdminShell } from "@/components/admin/mantine/shell";
 import { signOut } from "@/modules/auth/config";
@@ -15,16 +16,20 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
   }
 
   return (
-    <AdminMantineProvider>
-      <AdminShell
-        brand={brandName}
-        email={ctx.email}
-        scopeLabel={ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}
-        isSuperAdmin={ctx.isSuperAdmin}
-        logout={logout}
-      >
-        {children}
-      </AdminShell>
-    </AdminMantineProvider>
+    <>
+      {/* Applies the saved light/dark choice before paint (see color-scheme-script.ts). */}
+      <script dangerouslySetInnerHTML={{ __html: colorSchemeScript }} />
+      <AdminMantineProvider>
+        <AdminShell
+          brand={brandName}
+          email={ctx.email}
+          scopeLabel={ctx.isSuperAdmin ? "All regions" : `${ctx.regionIds.length} region(s)`}
+          isSuperAdmin={ctx.isSuperAdmin}
+          logout={logout}
+        >
+          {children}
+        </AdminShell>
+      </AdminMantineProvider>
+    </>
   );
 }

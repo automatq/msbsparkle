@@ -7,40 +7,40 @@ import { Button } from "@/components/ui/button";
 import { autoAssignDayAction, type ActionResult } from "@/modules/admin/actions";
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-900",
-  CONFIRMED: "bg-sky-100 text-sky-900",
-  ASSIGNED: "bg-indigo-100 text-indigo-900",
-  EN_ROUTE: "bg-violet-100 text-violet-900",
-  IN_PROGRESS: "bg-blue-100 text-blue-900",
-  COMPLETED: "bg-emerald-100 text-emerald-900",
-  CANCELLED: "bg-zinc-200 text-zinc-700",
-  SKIPPED: "bg-zinc-100 text-zinc-600",
-  NO_SHOW: "bg-rose-100 text-rose-900",
-  ACTIVE: "bg-emerald-100 text-emerald-900",
-  PAUSED: "bg-amber-100 text-amber-900",
-  UNPAID: "bg-zinc-100 text-zinc-700",
-  PAID: "bg-emerald-100 text-emerald-900",
-  FAILED: "bg-rose-100 text-rose-900",
-  WAIVED: "bg-zinc-100 text-zinc-600",
-  REFUNDED: "bg-orange-100 text-orange-900",
-  PARTIALLY_REFUNDED: "bg-orange-100 text-orange-900",
-  CAPTURED: "bg-emerald-100 text-emerald-900",
-  REQUIRES_ACTION: "bg-amber-100 text-amber-900",
-  DRAFT: "bg-amber-100 text-amber-900",
-  PUBLISHED: "bg-emerald-100 text-emerald-900",
-  ARCHIVED: "bg-zinc-100 text-zinc-600",
-  ONBOARDING: "bg-amber-100 text-amber-900",
-  INACTIVE: "bg-zinc-100 text-zinc-600",
-  SUSPENDED: "bg-rose-100 text-rose-900",
-  REQUESTED: "bg-amber-100 text-amber-900",
-  APPROVED: "bg-emerald-100 text-emerald-900",
-  DENIED: "bg-zinc-200 text-zinc-700",
+  PENDING: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  CONFIRMED: "bg-sky-100 text-sky-900 dark:bg-sky-500/15 dark:text-sky-300",
+  ASSIGNED: "bg-indigo-100 text-indigo-900 dark:bg-indigo-500/15 dark:text-indigo-300",
+  EN_ROUTE: "bg-violet-100 text-violet-900 dark:bg-violet-500/15 dark:text-violet-300",
+  IN_PROGRESS: "bg-blue-100 text-blue-900 dark:bg-blue-500/15 dark:text-blue-300",
+  COMPLETED: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  CANCELLED: "bg-zinc-200 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300",
+  SKIPPED: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-300",
+  NO_SHOW: "bg-rose-100 text-rose-900 dark:bg-rose-500/15 dark:text-rose-300",
+  ACTIVE: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  PAUSED: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  UNPAID: "bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300",
+  PAID: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  FAILED: "bg-rose-100 text-rose-900 dark:bg-rose-500/15 dark:text-rose-300",
+  WAIVED: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-300",
+  REFUNDED: "bg-orange-100 text-orange-900 dark:bg-orange-500/15 dark:text-orange-300",
+  PARTIALLY_REFUNDED: "bg-orange-100 text-orange-900 dark:bg-orange-500/15 dark:text-orange-300",
+  CAPTURED: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  REQUIRES_ACTION: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  DRAFT: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  PUBLISHED: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  ARCHIVED: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-300",
+  ONBOARDING: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  INACTIVE: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-300",
+  SUSPENDED: "bg-rose-100 text-rose-900 dark:bg-rose-500/15 dark:text-rose-300",
+  REQUESTED: "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300",
+  APPROVED: "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300",
+  DENIED: "bg-zinc-200 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300",
 };
 
 export function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? "bg-muted"}`}
+      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? "bg-muted text-muted-foreground"}`}
     >
       {status.replaceAll("_", " ")}
     </span>

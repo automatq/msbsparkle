@@ -22,8 +22,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      // Mantine (admin) is light-only; set statically so its styles apply before hydration.
+      // Light by default, so Mantine's styles apply before hydration. The admin may switch to dark
+      // (see (admin)/layout.tsx); that changes these attributes before React hydrates.
       data-mantine-color-scheme="light"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
