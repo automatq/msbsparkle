@@ -1,14 +1,22 @@
-import Link from "next/link";
-import { StatusBadge } from "@/components/admin/ui";
-import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Group,
+  Paper,
+  Stack,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableScrollContainer,
+  TableTbody,
+  TableTd,
+  TableTh,
+  TableThead,
+  TableTr,
+  Text,
+  Title,
+} from "@mantine/core";
+import Link from "next/link";
+import { Suspense } from "react";
+import { JobFilters } from "@/components/admin/mantine/job-filters";
+import { StatusPill } from "@/components/admin/mantine/status-badge";
+import { buttonVariants } from "@/components/ui/button";
 import { visibleRegions } from "@/modules/admin/regions";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
@@ -85,124 +93,114 @@ export default async function JobsPage({ searchParams }: PageProps<"/admin/jobs"
     take: 300,
   });
 
+  const dateLabel = (d: Date) =>
+    new Date(`${dateColumnToLocalDate(d)}T12:00:00`).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Jobs</h1>
+    <Stack gap="lg">
+      <Group justify="space-between">
+        <div>
+          <Title order={1} fz={24} fw={600}>
+            Jobs
+          </Title>
+          <Text size="sm" c="dimmed">
+            {jobs.length === 300
+              ? "First 300 visits"
+              : `${jobs.length} visit${jobs.length === 1 ? "" : "s"}`}
+          </Text>
+        </div>
         <Link href="/admin/bookings/new" className={buttonVariants({ size: "sm" })}>
           New booking
         </Link>
-      </div>
-      <form className="flex flex-wrap items-end gap-2 text-sm">
-        <label className="flex flex-col gap-1">
-          From
-          <input
-            type="date"
-            name="from"
-            defaultValue={from}
-            className="h-8 rounded-lg border px-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          To
-          <input type="date" name="to" defaultValue={to} className="h-8 rounded-lg border px-2" />
-        </label>
-        <label className="flex flex-col gap-1">
-          Status
-          <select
-            name="status"
-            defaultValue={status}
-            className="h-8 rounded-lg border bg-background px-2"
-          >
-            <option value="">Any</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          Region
-          <select
-            name="region"
-            defaultValue={regionId}
-            className="h-8 rounded-lg border bg-background px-2"
-          >
-            <option value="">All</option>
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          Search
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Booking # or customer"
-            className="h-8 rounded-lg border px-2"
-          />
-        </label>
-        <Button type="submit" size="sm" variant="outline">
-          Filter
-        </Button>
-      </form>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>When</TableHead>
-            <TableHead>Booking</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Service</TableHead>
-            <TableHead>Region</TableHead>
-            <TableHead>Cleaner</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Payment</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {jobs.map((j) => (
-            <TableRow key={j.id}>
-              <TableCell className="whitespace-nowrap">
-                <Link href={`/admin/jobs/${j.id}`} className="underline-offset-2 hover:underline">
-                  {dateColumnToLocalDate(j.scheduledDate)} {j.windowStartLocal}
-                </Link>
-              </TableCell>
-              <TableCell className="font-mono text-xs">{j.booking.bookingNumber}</TableCell>
-              <TableCell>
-                {j.customer.firstName} {j.customer.lastName}
-              </TableCell>
-              <TableCell>{j.service.name}</TableCell>
-              <TableCell>{j.region.name}</TableCell>
-              <TableCell>
-                {j.assignments
-                  .map((a) => `${a.cleaner.firstName} ${a.cleaner.lastName[0]}.`)
-                  .join(", ") || <span className="text-amber-700">Unassigned</span>}
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={j.status} />
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={j.paymentStatus} />
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCents(j.activeQuote?.totalCents ?? 0)}
-              </TableCell>
-            </TableRow>
-          ))}
-          {jobs.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
-                No jobs match.
-              </TableCell>
-            </TableRow>
-          ) : null}
-        </TableBody>
-      </Table>
-    </div>
+      </Group>
+
+      <Suspense>
+        <JobFilters
+          from={from}
+          to={to}
+          status={status}
+          regionId={regionId}
+          q={q}
+          statuses={STATUSES}
+          regions={regions.map((r) => ({ id: r.id, name: r.name }))}
+          defaults={{ from: today, to: addLocalDays(today, 14) }}
+        />
+      </Suspense>
+
+      <Paper p={0}>
+        <TableScrollContainer minWidth={960}>
+          <Table stickyHeader striped>
+            <TableThead>
+              <TableTr>
+                <TableTh>When</TableTh>
+                <TableTh>Booking</TableTh>
+                <TableTh>Customer</TableTh>
+                <TableTh>Service</TableTh>
+                <TableTh>Region</TableTh>
+                <TableTh>Cleaner</TableTh>
+                <TableTh>Status</TableTh>
+                <TableTh>Payment</TableTh>
+                <TableTh ta="right">Total</TableTh>
+              </TableTr>
+            </TableThead>
+            <TableTbody>
+              {jobs.map((j) => (
+                <TableTr key={j.id}>
+                  <TableTd style={{ whiteSpace: "nowrap" }}>
+                    <Link href={`/admin/jobs/${j.id}`} className="font-medium hover:underline">
+                      {dateLabel(j.scheduledDate)}
+                    </Link>
+                    <Text size="xs" c="dimmed">
+                      {j.windowStartLocal}–{j.windowEndLocal}
+                    </Text>
+                  </TableTd>
+                  <TableTd>
+                    <Text span ff="monospace" size="xs">
+                      {j.booking.bookingNumber}
+                    </Text>
+                  </TableTd>
+                  <TableTd>
+                    {j.customer.firstName} {j.customer.lastName}
+                  </TableTd>
+                  <TableTd>{j.service.name}</TableTd>
+                  <TableTd>{j.region.name}</TableTd>
+                  <TableTd>
+                    {j.assignments
+                      .map((a) => `${a.cleaner.firstName} ${a.cleaner.lastName[0]}.`)
+                      .join(", ") || (
+                      <Text span size="sm" c="orange.8" fw={500}>
+                        Unassigned
+                      </Text>
+                    )}
+                  </TableTd>
+                  <TableTd>
+                    <StatusPill status={j.status} />
+                  </TableTd>
+                  <TableTd>
+                    <StatusPill status={j.paymentStatus} />
+                  </TableTd>
+                  <TableTd ta="right" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {formatCents(j.activeQuote?.totalCents ?? 0)}
+                  </TableTd>
+                </TableTr>
+              ))}
+              {jobs.length === 0 ? (
+                <TableTr>
+                  <TableTd colSpan={9}>
+                    <Text ta="center" c="dimmed" py="xl">
+                      No jobs match these filters.
+                    </Text>
+                  </TableTd>
+                </TableTr>
+              ) : null}
+            </TableTbody>
+          </Table>
+        </TableScrollContainer>
+      </Paper>
+    </Stack>
   );
 }

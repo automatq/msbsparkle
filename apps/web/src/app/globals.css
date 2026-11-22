@@ -1,3 +1,7 @@
+/* Mantine (admin only) sits after Tailwind's reset and before its utilities, so Tailwind classes
+   still win wherever both apply. Must come before any layered styles. */
+@layer theme, base, mantine, components, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
