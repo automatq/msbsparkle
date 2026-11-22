@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  Package,
   Receipt,
   ShieldCheck,
   Tags,
@@ -57,6 +58,7 @@ const NAV: { title: string; items: Item[] }[] = [
     title: "Business",
     items: [
       { href: "/admin/regions", label: "Regions", icon: MapPin },
+      { href: "/admin/catalog", label: "Catalog", icon: Package, superAdmin: true },
       { href: "/admin/pricing", label: "Pricing", icon: Tags },
       { href: "/admin/taxes", label: "Taxes", icon: Receipt },
       { href: "/admin/payments", label: "Payments", icon: CreditCard },
