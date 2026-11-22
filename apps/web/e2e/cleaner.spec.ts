@@ -72,7 +72,8 @@ test("cleaner: OTP login, accept assignment, check in, checklist, photo, check o
   await ap.locator("table tbody tr td a").first().click();
   await ap.waitForURL(/\/admin\/jobs\/[^/?]+$/);
   const jobUrl = ap.url();
-  await ap.getByRole("combobox").first().selectOption({ label: "Amara Okafor" });
+  await ap.getByTestId("assign-cleaner").click();
+  await ap.getByRole("option", { name: "Amara Okafor" }).click();
   await ap.getByLabel("Ignore conflicts").check(); // earlier runs may have booked the same window
   await ap.getByTestId("assign-manual").click();
   await expect(ap.getByText("Done")).toBeVisible();
@@ -132,7 +133,7 @@ test("cleaner: OTP login, accept assignment, check in, checklist, photo, check o
 
   // 5. Admin sees the job completed with check-in/out times and it is queued for payment.
   await ap.goto(jobUrl);
-  await expect(ap.locator("main").getByText("COMPLETED", { exact: true }).first()).toBeVisible();
+  await expect(ap.getByTestId("job-status")).toHaveAttribute("data-status", "COMPLETED");
   await expect(ap.getByText(/in \d+:\d+ (AM|PM)/)).toBeVisible();
   await ap.goto("/admin/payments");
   await expect(ap.locator("table").first().getByText(bookingNumber)).toBeVisible();

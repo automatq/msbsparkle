@@ -69,16 +69,17 @@ test.describe("admin dispatch", () => {
     await page.goto(`/admin/jobs?from=2020-01-01&to=2030-01-01&q=${bookingNumber}`);
     await page.locator("table tbody tr td a").first().click();
     await page.waitForURL(/\/admin\/jobs\/[^/?]+$/);
-    await page.getByRole("combobox").first().selectOption({ label: "Amara Okafor" });
+    await page.getByTestId("assign-cleaner").click();
+    await page.getByRole("option", { name: "Amara Okafor" }).click();
     await page.getByLabel("Ignore conflicts").check(); // other specs may have booked the same window
     await page.getByTestId("assign-manual").click();
     await expect(page.getByText("Done").first()).toBeVisible();
-    await expect(page.locator("main").getByText("ASSIGNED", { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("job-status")).toHaveAttribute("data-status", "ASSIGNED");
     await expect(page.getByRole("link", { name: "Amara Okafor" })).toBeVisible();
     await expect(page.getByText("CONFIRMED → ASSIGNED")).toBeVisible();
     // Conflict detection: the same cleaner cannot take an overlapping job without force.
     await page.getByRole("button", { name: "Remove" }).click();
-    await expect(page.getByText("CONFIRMED", { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("job-status")).toHaveAttribute("data-status", "CONFIRMED");
   });
 
   test("region admin only sees their region and is blocked from other regions' jobs", async ({

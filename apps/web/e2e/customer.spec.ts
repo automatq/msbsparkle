@@ -129,12 +129,13 @@ test("customer can rate and tip a completed visit; the cleaner's earnings includ
   await ap.goto(`/admin/jobs?from=2020-01-01&to=2030-01-01&q=${bookingNumber}`);
   await ap.locator("table tbody tr td a").first().click();
   await ap.waitForURL(/\/admin\/jobs\/[^/?]+$/);
-  await ap.getByRole("combobox").first().selectOption({ label: "Daniel Reyes" });
+  await ap.getByTestId("assign-cleaner").click();
+  await ap.getByRole("option", { name: "Daniel Reyes" }).click();
   await ap.getByLabel("Ignore conflicts").check();
   await ap.getByTestId("assign-manual").click();
   await expect(ap.getByText("Done").first()).toBeVisible();
   // Walk the job to COMPLETED via admin transitions.
-  for (const s of ["→ IN PROGRESS", "→ COMPLETED"]) {
+  for (const s of ["→ In progress", "→ Completed"]) {
     await ap.getByRole("button", { name: s }).click();
     await expect(ap.getByText("Done").first()).toBeVisible();
     await ap.waitForTimeout(300);
