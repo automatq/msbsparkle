@@ -98,3 +98,17 @@ test("only the widget can be framed by other sites", async ({ request }) => {
   const admin = await request.get("/admin/login");
   expect(admin.headers()["x-frame-options"]).toBe("DENY");
 });
+
+test("the widget preview doesn't scroll the admin page on load", async ({ page }) => {
+  // Same-origin embed: an autofocused field inside the iframe would pull the page down to it.
+  await page.goto("/admin/login");
+  await page.getByLabel("Email").fill("admin@msbsparkle.local");
+  await page.getByLabel("Password").fill("admin12345!");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL(/\/admin$/);
+  await page.goto("/admin/settings/embed");
+  const preview = page.frameLocator('iframe[title="Booking widget preview"]');
+  await expect(preview.getByLabel("Postal code")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});

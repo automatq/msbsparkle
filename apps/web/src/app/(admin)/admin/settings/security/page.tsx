@@ -1,5 +1,6 @@
-import { TotpSetup } from "@/components/admin/totp-setup";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Paper, Stack, Title } from "@mantine/core";
+import { PageHeader } from "@/components/admin/mantine/page-header";
+import { TotpSetup } from "@/components/admin/mantine/totp-setup";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 
@@ -12,19 +13,14 @@ export default async function SecurityPage() {
     select: { email: true, totpEnabled: true },
   });
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Security</h1>
-        <p className="text-sm text-muted-foreground">Signed in as {user.email}.</p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Two-factor authentication</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TotpSetup enabled={user.totpEnabled} />
-        </CardContent>
-      </Card>
-    </div>
+    <Stack gap="lg" maw={720}>
+      <PageHeader title="Security" description={`Signed in as ${user.email}.`} />
+      <Paper p="md">
+        <Title order={2} fz="md" fw={600} mb="sm">
+          Two-factor authentication
+        </Title>
+        <TotpSetup enabled={user.totpEnabled} />
+      </Paper>
+    </Stack>
   );
 }
