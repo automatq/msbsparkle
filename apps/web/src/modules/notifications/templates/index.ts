@@ -317,3 +317,33 @@ export function customerTrackingTemplate(d: {
     sms: `${d.brand}: ${line} Track: ${d.trackUrl}`,
   };
 }
+
+/** Invitation to the admin team, or a password reset: one link where they choose a password. */
+export function adminPasswordLinkTemplate(d: {
+  brand: string;
+  name: string | null;
+  kind: "invite" | "reset";
+  link: string;
+  invitedBy: string | null;
+  validFor: string;
+}): Msg {
+  const hi = d.name ? `Hi ${d.name.split(" ")[0]},` : "Hi,";
+  const invite = d.kind === "invite";
+  const title = invite
+    ? `You're invited to ${d.brand} admin`
+    : `Reset your ${d.brand} admin password`;
+  const line = invite
+    ? `${d.invitedBy ?? "A teammate"} added you to the ${d.brand} admin team. Choose a password to get started.`
+    : `Use the link below to choose a new password. If you didn't ask for this, ignore this email and your password stays the same.`;
+  const note = `The link works once and expires in ${d.validFor}.`;
+  return {
+    subject: title,
+    html: wrap(
+      title,
+      `<p>${esc(hi)} ${esc(line)}</p>${btn(d.link, invite ? "Choose your password" : "Reset password")}<p style="font-size:13px;color:#666">${esc(note)}</p>`,
+      d.brand,
+    ),
+    text: `${hi} ${line}\n\n${d.link}\n\n${note}`,
+    sms: "",
+  };
+}

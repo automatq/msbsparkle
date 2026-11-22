@@ -76,6 +76,12 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
       <Button type="submit" className="w-full">
         Sign in
       </Button>
+      <Link
+        href="/admin/forgot-password"
+        className="block text-center text-sm text-muted-foreground underline"
+      >
+        Forgot your password?
+      </Link>
     </form>
   );
 }

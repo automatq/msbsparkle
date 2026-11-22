@@ -25,6 +25,7 @@ import {
   Receipt,
   ShieldCheck,
   Tags,
+  UserCog,
   UserPlus,
   Users,
   UsersRound,
@@ -67,6 +68,7 @@ const NAV: { title: string; items: Item[] }[] = [
   {
     title: "Settings",
     items: [
+      { href: "/admin/settings/team", label: "Team", icon: UserCog, superAdmin: true },
       { href: "/admin/settings/embed", label: "Website widget", icon: CodeXml },
       { href: "/admin/settings/webhooks", label: "Webhooks", icon: Webhook, superAdmin: true },
       { href: "/admin/settings/api-keys", label: "API keys", icon: KeyRound, superAdmin: true },
