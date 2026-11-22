@@ -97,6 +97,14 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
     ? []
     : await suggestCleaners(job.id);
   const active = job.assignments.filter((a) => ["ACCEPTED", "OFFERED"].includes(a.status));
+  const onJob = new Set(active.map((a) => a.cleanerId));
+  // Names for the timeline: anyone ever assigned, plus the region's active cleaners.
+  const names = new Map<string, string>([
+    ...cleaners.map((c) => [c.id, `${c.firstName} ${c.lastName}`] as const),
+    ...job.assignments.map(
+      (a) => [a.cleanerId, `${a.cleaner.firstName} ${a.cleaner.lastName}`] as const,
+    ),
+  ]);
   const addr = job.addressSnapshot as {
     line1: string;
     line2?: string | null;
@@ -190,7 +198,12 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                     </Group>
                   </Paper>
                 ))}
-                {open ? <SuggestPanel jobId={job.id} suggestions={suggestions} /> : null}
+                {open ? (
+                  <SuggestPanel
+                    jobId={job.id}
+                    suggestions={suggestions.filter((x) => !onJob.has(x.id))}
+                  />
+                ) : null}
                 {open ? (
                   <AssignPanel
                     jobId={job.id}
@@ -267,8 +280,10 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
                           {formatInZone(e.createdAt, job.timezone, "MMM d, h:mm a")} ·{" "}
                           {e.actorType.toLowerCase()}
                         </Text>
-                        {summarize(e.data as Record<string, unknown>) ? (
-                          <Text size="sm">{summarize(e.data as Record<string, unknown>)}</Text>
+                        {summarize(e.data as Record<string, unknown>, names) ? (
+                          <Text size="sm">
+                            {summarize(e.data as Record<string, unknown>, names)}
+                          </Text>
                         ) : null}
                       </TimelineItem>
                     ))}
@@ -368,13 +383,24 @@ export default async function JobPage({ params }: PageProps<"/admin/jobs/[id]">)
   );
 }
 
-function summarize(d: Record<string, unknown>): string {
+/** One line describing a job event, for the timeline. */
+function summarize(d: Record<string, unknown>, names: Map<string, string>): string {
+  const reason = d.reason ? ` (${d.reason})` : "";
   if (typeof d.note === "string") return d.note;
-  if (d.from && d.to) return `${d.from} → ${d.to}${d.reason ? ` (${d.reason})` : ""}`;
-  if (d.cleanerId)
-    return `cleaner ${String(d.cleanerId).slice(-6)}${d.status ? ` ${d.status}` : ""}${d.reason ? ` (${d.reason})` : ""}`;
-  if (d.after && typeof d.after === "object")
-    return `to ${(d.after as { scheduledDate?: string }).scheduledDate ?? ""} ${(d.after as { windowStartLocal?: string }).windowStartLocal ?? ""}`;
-  if (d.status) return String(d.status);
-  return Object.keys(d).length ? JSON.stringify(d).slice(0, 80) : "";
+  if (d.from && d.to) return `${d.from} → ${d.to}${reason}`;
+  if (d.to) return `→ ${d.to}${reason}`;
+  if (d.cleanerId) {
+    const who = names.get(String(d.cleanerId)) ?? `cleaner …${String(d.cleanerId).slice(-6)}`;
+    const status = typeof d.status === "string" ? ` ${d.status.toLowerCase()}` : "";
+    return `${who}${status}${reason}`;
+  }
+  if (d.after && typeof d.after === "object") {
+    const a = d.after as { scheduledDate?: string; windowStartLocal?: string };
+    return `to ${a.scheduledDate ?? ""} ${a.windowStartLocal ?? ""}`.trim();
+  }
+  if (typeof d.chargeId === "string" && d.status) return `charge ${String(d.status).toLowerCase()}`;
+  if (typeof d.refundId === "string" && typeof d.amountCents === "number")
+    return `refund ${formatCents(d.amountCents)}${reason}`;
+  if (d.status) return String(d.status).toLowerCase();
+  return "";
 }
