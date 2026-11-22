@@ -209,7 +209,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
           label="Awaiting charge"
           value={dueCount > DUE_LIMIT ? `${formatCents(dueCents)}+` : formatCents(dueCents)}
           hint={`${dueCount} completed visit${dueCount === 1 ? "" : "s"}`}
-          tone={dueCount ? "orange.8" : undefined}
+          tone={dueCount ? "orange" : undefined}
         />
         <Stat
           label="Collected, 30 days"
@@ -220,7 +220,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
           label="Failed, 30 days"
           value={String(failed)}
           hint="Failed or needs card action"
-          tone={failed ? "red.8" : undefined}
+          tone={failed ? "red" : undefined}
         />
         <Stat label="Refunded, 30 days" value={formatCents(refunded._sum.amountCents ?? 0)} />
       </SimpleGrid>
@@ -358,7 +358,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/admin/p
                       <TableTd>
                         <StatusPill status={c.status} />
                         {c.failureMessage ? (
-                          <Text size="xs" c="red.8" mt={2}>
+                          <Text size="xs" c="red" mt={2}>
                             {c.failureMessage}
                           </Text>
                         ) : null}
