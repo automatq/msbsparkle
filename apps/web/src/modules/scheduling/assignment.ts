@@ -5,6 +5,7 @@ import { transitionJob } from "@/modules/jobs/state-machine";
 import { jobPayload } from "@/modules/webhooks/payloads";
 import { recordWebhookEvent } from "@/modules/webhooks/queue";
 import { emit } from "@/modules/jobs/client";
+import { approvedTimeOffOn } from "./time-off";
 
 export type AssignmentConflict = { jobId: string; bookingNumber: string; start: Date; end: Date };
 
@@ -104,6 +105,9 @@ export async function assignCleaner(
   }
   if (conflicts.length)
     warnings.push(`Overlaps ${conflicts.map((c) => c.bookingNumber).join(", ")}.`);
+
+  if (await prisma.timeOff.count({ where: { cleanerId, ...approvedTimeOffOn(job.scheduledDate) } }))
+    warnings.push(`${cleaner.firstName} has approved time off that day.`);
 
   const sameDay = await prisma.assignment.count({
     where: {

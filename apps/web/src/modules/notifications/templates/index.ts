@@ -126,6 +126,41 @@ export function cleanerJobChangedTemplate(d: {
   };
 }
 
+/** Tells a cleaner what happened to their time off (decided, added or removed by dispatch). */
+export function cleanerTimeOffTemplate(d: {
+  brand: string;
+  firstName: string;
+  kind: "approved" | "denied" | "added" | "removed";
+  from: string; // YYYY-MM-DD
+  to: string;
+  url: string;
+}): Msg {
+  const days = d.from === d.to ? d.from : `${d.from} to ${d.to}`;
+  const title = {
+    approved: "Time off approved",
+    denied: "Time off not approved",
+    added: "Time off added",
+    removed: "Time off removed",
+  }[d.kind];
+  const line = {
+    approved: `Your time off for ${days} is approved. You won't be scheduled then.`,
+    denied: `Your time-off request for ${days} wasn't approved. Talk to your dispatcher if you need it.`,
+    added: `Your dispatcher added time off for you: ${days}. You won't be scheduled then.`,
+    removed: `Your time off for ${days} was removed, so you can be scheduled again.`,
+  }[d.kind];
+  return {
+    subject: `${title}: ${days}`,
+    html: wrap(
+      title,
+      `<p>Hi ${esc(d.firstName)}, ${esc(line)}</p>${btn(d.url, "Your availability")}`,
+      d.brand,
+    ),
+    text: `Hi ${d.firstName}, ${line} ${d.url}`,
+    sms: `${d.brand}: ${line}`,
+    push: { title, body: line, data: { kind: "time_off" } },
+  };
+}
+
 /** Day-before reminder for the cleaner, pushed to the app (SMS when they have no app). */
 export function cleanerReminderTemplate(d: {
   brand: string;
@@ -229,18 +264,20 @@ export function adminDigestTemplate(d: {
     unassigned: number;
     completedYesterday: number;
     failedPayments: number;
+    /** Completed over a day ago with no charge attempt at all. */
+    unbilled: number;
   }[];
   adminUrl: string;
 }): Msg {
   const subject = `${d.brand} daily digest · ${d.date}`;
   const lines = d.rows.map(
     (r) =>
-      `${r.region}: ${r.jobs} jobs today, ${r.unassigned} unassigned, ${r.completedYesterday} completed yesterday, ${r.failedPayments} failed payments`,
+      `${r.region}: ${r.jobs} jobs today, ${r.unassigned} unassigned, ${r.completedYesterday} completed yesterday, ${r.failedPayments} failed payments${r.unbilled ? `, ${r.unbilled} completed but never billed` : ""}`,
   );
   const text = [`Digest for ${d.date}`, ...lines, `Dispatch: ${d.adminUrl}`].join("\n");
   const html = wrap(
     `Daily digest · ${d.date}`,
-    `<table style="border-collapse:collapse;font-size:14px;width:100%"><tr><th align="left">Region</th><th>Jobs today</th><th>Unassigned</th><th>Done yesterday</th><th>Failed payments</th></tr>${d.rows.map((r) => `<tr><td>${esc(r.region)}</td><td align="center">${r.jobs}</td><td align="center" style="${r.unassigned ? "color:#b45309;font-weight:bold" : ""}">${r.unassigned}</td><td align="center">${r.completedYesterday}</td><td align="center" style="${r.failedPayments ? "color:#b91c1c;font-weight:bold" : ""}">${r.failedPayments}</td></tr>`).join("")}</table>${btn(d.adminUrl, "Open dispatch")}`,
+    `<table style="border-collapse:collapse;font-size:14px;width:100%"><tr><th align="left">Region</th><th>Jobs today</th><th>Unassigned</th><th>Done yesterday</th><th>Failed payments</th><th>Never billed</th></tr>${d.rows.map((r) => `<tr><td>${esc(r.region)}</td><td align="center">${r.jobs}</td><td align="center" style="${r.unassigned ? "color:#b45309;font-weight:bold" : ""}">${r.unassigned}</td><td align="center">${r.completedYesterday}</td><td align="center" style="${r.failedPayments ? "color:#b91c1c;font-weight:bold" : ""}">${r.failedPayments}</td><td align="center" style="${r.unbilled ? "color:#b91c1c;font-weight:bold" : ""}">${r.unbilled}</td></tr>`).join("")}</table>${btn(d.adminUrl, "Open dispatch")}`,
     d.brand,
   );
   return { subject, html, text, sms: "" };

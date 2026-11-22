@@ -32,6 +32,9 @@ const STATUS_STYLES: Record<string, string> = {
   ONBOARDING: "bg-amber-100 text-amber-900",
   INACTIVE: "bg-zinc-100 text-zinc-600",
   SUSPENDED: "bg-rose-100 text-rose-900",
+  REQUESTED: "bg-amber-100 text-amber-900",
+  APPROVED: "bg-emerald-100 text-emerald-900",
+  DENIED: "bg-zinc-200 text-zinc-700",
 };
 
 export function StatusBadge({ status }: { status: string }) {

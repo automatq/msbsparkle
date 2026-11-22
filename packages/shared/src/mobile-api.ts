@@ -116,7 +116,8 @@ export const unregisterDeviceBody = z.object({ expoPushToken: expoPushTokenSchem
 
 /**
  * What a push carries in `data`. `jobId` means "open this job"; `kind` is one of
- * offer | assigned | rescheduled | reminder (with jobId) or cancelled | removed (without).
+ * offer | assigned | rescheduled | reminder (with jobId), cancelled | removed (without), or
+ * time_off (a time-off decision: open Availability).
  */
 export type PushData = { kind: string; jobId?: string };
 

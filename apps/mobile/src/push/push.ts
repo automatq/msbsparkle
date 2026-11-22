@@ -64,6 +64,7 @@ export async function unregisterPush() {
 function open(data: unknown) {
   const d = data as Partial<PushData> | undefined;
   if (d?.jobId) router.push({ pathname: "/jobs/[id]", params: { id: d.jobId } });
+  else if (d?.kind === "time_off") router.push("/availability");
   else if (d?.kind) router.push("/");
 }
 

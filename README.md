@@ -36,7 +36,7 @@ Every task is also callable without Inngest for testing or as a Vercel Cron fall
 
 ```bash
 curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_SECRET" \
-  -H 'content-type: application/json' -d '{"task":"reminders"}'   # reminders | cutoff | series | retries | digest | charge | review
+  -H 'content-type: application/json' -d '{"task":"reminders"}'   # reminders | cutoff | series | retries | charge-sweep | digest | charge | review
 ```
 
 ## Operations and hardening
@@ -44,6 +44,8 @@ curl -X POST localhost:3000/api/internal/tasks -H "authorization: Bearer $CRON_S
 - **Smart dispatch**: each job page ranks cleaners (preferred, history with the customer, availability, skills, conflicts, rating, daily load) with one-click assign; the dispatch board offers "Auto-assign" for a region day. Regions can switch capacity to `DERIVED` from cleaner availability.
 - **Admin 2FA**: `/admin/settings/security` enrols an authenticator app; codes are then required at sign-in. Needs a 32-byte base64 `AUTH_ENCRYPTION_KEY`.
 - **Rate limits** (Postgres-backed, no Redis): quotes 120/min per IP; sign-in code requests 5/15 min and code guesses 5/15 min per phone; magic links 5/15 min per email; failed admin logins 10/15 min per email. Sign-in limits are enforced inside the Auth.js providers, so they also cover direct `/api/auth/*` calls. Checkout, bookings, gift cards and public forms are limited per IP.
+- **Charging safety net**: a completed visit is normally charged by the `job/completed` event after the grace period. The hourly `payment-retries` job also sweeps for completed visits that have no charge at all (the event was lost) and charges them, up to 7 days back; older ones are listed as "never billed" in the admin digest. Run it by hand with the `charge-sweep` task.
+- **Time off**: cleaners request it in the app or portal; it only takes them off the schedule once an admin approves it (**Admin → Cleaners**, where pending requests are listed, or the cleaner's page). Admins can also add, revoke and remove time off; the cleaner is notified each time.
 - **Retention**: photos are purged after 90 days (`retention` task, daily); super admins can delete a customer's personal data while keeping financial records.
 
 ## Mobile API (cleaner app)
