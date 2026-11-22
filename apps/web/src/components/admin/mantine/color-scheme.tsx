@@ -2,6 +2,7 @@
 
 import {
   ActionIcon,
+  Box,
   Menu,
   Tooltip,
   useComputedColorScheme,
@@ -40,8 +41,6 @@ const OPTIONS: { value: MantineColorScheme; label: string; icon: typeof Sun }[] 
 /** Light / Dark / Auto switch for the admin header. Remembered per browser. */
 export function ColorSchemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
-  const computed = useComputedColorScheme("light", { getInitialValueInEffect: true });
-  const Icon = computed === "dark" ? Moon : Sun;
   return (
     <Menu position="bottom-end" width={180} withinPortal>
       <Menu.Target>
@@ -52,7 +51,14 @@ export function ColorSchemeToggle() {
             aria-label="Appearance"
             data-testid="color-scheme-toggle"
           >
-            <Icon size={16} strokeWidth={1.75} />
+            {/* Both icons, shown by CSS from the scheme attribute the inline script sets before
+                paint: correct at once, and server and client render the same markup. */}
+            <Box component="span" darkHidden display="flex">
+              <Sun size={16} strokeWidth={1.75} />
+            </Box>
+            <Box component="span" lightHidden display="flex">
+              <Moon size={16} strokeWidth={1.75} />
+            </Box>
           </ActionIcon>
         </Tooltip>
       </Menu.Target>

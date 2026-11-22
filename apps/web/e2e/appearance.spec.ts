@@ -9,6 +9,9 @@ const scheme = (page: Page) =>
 test("admin dark mode switches both UIs, persists, and never leaks to the public site", async ({
   page,
 }) => {
+  // Hydration mismatches (e.g. markup that differs by scheme) surface as page errors.
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/admin/login");
   await page.getByLabel("Email").fill("admin@msbsparkle.local");
   await page.getByLabel("Password").fill("admin12345!");
@@ -32,6 +35,11 @@ test("admin dark mode switches both UIs, persists, and never leaks to the public
   expect(await scheme(page)).toEqual({ mantine: "light", dark: false });
   await page.goto("/admin");
   await expect.poll(() => scheme(page)).toEqual({ mantine: "dark", dark: true });
+
+  // A full reload in dark mode hydrates without errors.
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  expect(errors).toEqual([]);
 
   // Back to light for other specs sharing this browser profile.
   await page.getByTestId("color-scheme-toggle").click();
