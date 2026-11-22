@@ -11,6 +11,7 @@ export default async function EmbedBookPage({ searchParams }: PageProps<"/embed/
       extras={extras}
       initial={initial}
       confirmationBase="/embed/book/confirmation"
+      autoFocus={false}
     />
   );
 }

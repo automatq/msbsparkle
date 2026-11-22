@@ -72,6 +72,7 @@ export function BookingWizard({
   initial,
   adminMode = false,
   confirmationBase = "/book/confirmation",
+  autoFocus = true,
 }: {
   services: ServiceOption[];
   extras: ExtraOption[];
@@ -80,6 +81,11 @@ export function BookingWizard({
   adminMode?: boolean;
   /** Where to go after booking; the embeddable widget stays inside its iframe. */
   confirmationBase?: string;
+  /**
+   * Focus the first field on load. Off in the embed: focusing inside an iframe scrolls the host
+   * page down to the widget as soon as it loads.
+   */
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("Location");
@@ -308,7 +314,7 @@ export function BookingWizard({
                 onChange={(e) => setPostal(e.target.value)}
                 placeholder={country.postalPlaceholder}
                 required
-                autoFocus
+                autoFocus={autoFocus}
                 className="max-w-xs uppercase"
               />
             </div>
