@@ -11,6 +11,8 @@ declare module "next-auth" {
       orgId: string;
       roles: RoleClaim[];
       amr: string[];
+      /** User.sessionVersion when the roles were last loaded; see getOptionalCtx. */
+      sessionVersion?: number;
     };
   }
 }
@@ -42,6 +44,7 @@ export const edgeAuthConfig = {
       session.user.orgId = token.orgId ?? "";
       session.user.roles = token.roles ?? [];
       session.user.amr = token.amr ?? [];
+      session.user.sessionVersion = token.sessionVersion;
       return session;
     },
   },

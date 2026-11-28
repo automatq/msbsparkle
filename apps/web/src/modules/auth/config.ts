@@ -15,7 +15,7 @@ import {
 } from "./limits";
 import { verifyOtp } from "./otp";
 import { verifyPassword } from "./password";
-import type { RoleClaim } from "./roles";
+import { rolesForSession, type RoleClaim } from "./roles";
 import { decryptSecret, verifyTotp } from "./totp";
 import { emailFrom } from "@/modules/shared/site";
 
@@ -224,7 +224,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.sessionVersion !== undefined && token.sessionVersion !== loaded.sessionVersion)
           return null;
         token.orgId = loaded.orgId;
-        token.roles = loaded.roles;
+        token.roles = rolesForSession(loaded.roles, token.amr);
         token.sessionVersion = loaded.sessionVersion;
         token.rolesRefreshedAt = now;
       }

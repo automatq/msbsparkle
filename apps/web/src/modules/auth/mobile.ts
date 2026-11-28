@@ -10,7 +10,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { DeviceInfo, TokenPair } from "@msb/shared/mobile-api";
 import { prisma } from "@/modules/db/client";
-import { isSuperAdmin, scopedRegionIds } from "./roles";
+import { isSuperAdmin, rolesForSession, scopedRegionIds } from "./roles";
 import type { Ctx } from "./session";
 
 export const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -156,7 +156,11 @@ export async function getMobileAuth(
     return null;
   if (now.getTime() - session.lastSeenAt.getTime() > SEEN_RESOLUTION_MS)
     await prisma.mobileSession.update({ where: { id: session.id }, data: { lastSeenAt: now } });
-  const roles = session.user.roles.map((r) => ({ role: r.role, regionId: r.regionId }));
+  // The app signs in with a mobile code, which never carries admin rights (see rolesForSession).
+  const roles = rolesForSession(
+    session.user.roles.map((r) => ({ role: r.role, regionId: r.regionId })),
+    ["otp"],
+  );
   return {
     sessionId: session.id,
     ctx: {

@@ -96,6 +96,20 @@ describe.skipIf(!enabled)("mobile API (integration)", () => {
       expect((await refreshMobileSession(second.tokens.refreshToken)).ok).toBe(false);
     });
 
+    it("an app session never carries admin rights, even for a login that has them", async () => {
+      const c = await fx.makeCleaner();
+      await prisma.userRole.createMany({
+        data: [
+          { userId: c.userId!, role: "CLEANER" },
+          { userId: c.userId!, role: "SUPER_ADMIN" },
+        ],
+      });
+      const t = await signIn(c.userId!);
+      const auth = await getMobileAuth(bearer(t.accessToken));
+      expect(auth?.ctx.roles.map((r) => r.role)).toEqual(["CLEANER"]);
+      expect(auth?.ctx.isSuperAdmin).toBe(false);
+    });
+
     it("bumping sessionVersion (suspension) ends every session", async () => {
       const c = await fx.makeCleaner();
       const t = await signIn(c.userId!);

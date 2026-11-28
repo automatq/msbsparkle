@@ -21,7 +21,13 @@ export const proxy = auth((req) => {
   };
 
   if (pathname.startsWith("/admin")) {
-    if (pathname === "/admin/login") return NextResponse.next();
+    // Signed-out pages: sign-in, forgotten password, and the emailed set-password link.
+    if (
+      pathname === "/admin/login" ||
+      pathname === "/admin/forgot-password" ||
+      pathname.startsWith("/admin/set-password/")
+    )
+      return NextResponse.next();
     if (!signedIn) return redirectTo("/admin/login");
     if (!hasRole(roles, "SUPER_ADMIN", "REGION_ADMIN")) return redirectTo("/");
   }
