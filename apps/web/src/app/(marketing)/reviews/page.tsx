@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { PageIntro } from "@/components/marketing/page-intro";
 import { orgSettings, publicReviews } from "@/modules/marketing/content";
+import { serviceHue } from "@/modules/marketing/hues";
 
 export const revalidate = 1800;
 export const metadata: Metadata = {
@@ -13,19 +15,26 @@ export default async function ReviewsPage() {
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null;
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-4xl font-semibold tracking-tight">Reviews</h1>
-      <p className="mt-2 text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-6">
+      <PageIntro title="Reviews">
         Rated {org.googleRating} on Google
         {org.googleReviewCount ? ` from ${org.googleReviewCount} reviews` : ""}.
         {avg ? ` ${avg} average from ${reviews.length} recent in-app ratings.` : ""}
-      </p>
-      <ul className="mt-8 grid gap-3 md:grid-cols-3">
+      </PageIntro>
+      <ul className="mt-12 grid gap-x-10 md:grid-cols-2">
         {reviews.map((r) => (
-          <li key={r.id} className="rounded-xl border p-4 text-sm">
-            <p className="text-amber-500">{"★".repeat(r.rating)}</p>
-            {r.comment ? <p className="mt-1">{r.comment}</p> : null}
-            <p className="mt-2 text-xs text-muted-foreground">
+          <li
+            key={r.id}
+            data-hue={serviceHue(r.job.service.slug)}
+            className="border-t border-foreground py-6"
+          >
+            <p className="tracking-[0.2em]" aria-label={`${r.rating} out of 5`}>
+              {"★".repeat(r.rating)}
+              <span className="text-muted-foreground/40">{"★".repeat(5 - r.rating)}</span>
+            </p>
+            {r.comment ? <p className="mt-3 text-lg">{r.comment}</p> : null}
+            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="size-2.5 shrink-0 rounded-full bg-hue" aria-hidden />
               {r.customer.firstName} {r.customer.lastName[0]}. · {r.job.region.name} ·{" "}
               {r.job.service.name}
               {r.cleaner ? ` with ${r.cleaner.firstName}` : ""}
@@ -33,7 +42,7 @@ export default async function ReviewsPage() {
           </li>
         ))}
         {reviews.length === 0 ? (
-          <li className="text-sm text-muted-foreground">
+          <li className="border-t border-foreground py-6 text-muted-foreground">
             Ratings from completed cleans appear here.
           </li>
         ) : null}

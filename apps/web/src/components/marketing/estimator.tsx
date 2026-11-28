@@ -1,14 +1,20 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { cn } from "cn";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { quoteAction } from "@/modules/bookings/actions";
+import { serviceHue } from "@/modules/marketing/hues";
 import { formatCents } from "@/modules/shared/money";
+import { RoomStrip, homeBlocks } from "./room-strip";
 
-export function Estimator() {
+/** The instant price: a standard clean, with the home drawn as it is described. */
+export function Estimator({ className }: { className?: string }) {
   const [postal, setPostal] = useState("");
   const [bedrooms, setBedrooms] = useState(2);
   const [bathrooms, setBathrooms] = useState(1);
@@ -42,85 +48,99 @@ export function Estimator() {
   const bookHref = `/book?postal=${encodeURIComponent(postal)}&service=standard&bedrooms=${bedrooms}&bathrooms=${bathrooms}&frequency=${frequency}`;
 
   return (
-    <form
-      onSubmit={submit}
-      className="space-y-4 rounded-xl border bg-background p-6 shadow-sm"
-      data-testid="estimator"
-    >
-      <h2 className="font-medium">Get an instant price</h2>
-      <div className="space-y-2">
-        <Label htmlFor="est-postal">Postal code</Label>
-        <Input
-          id="est-postal"
-          value={postal}
-          onChange={(e) => setPostal(e.target.value.toUpperCase())}
-          placeholder="M5V 2T6"
-          required
-        />
-      </div>
+    <form onSubmit={submit} className={cn("space-y-5", className)} data-testid="estimator">
       <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 space-y-2 sm:col-span-1">
+          <Label htmlFor="est-postal">Postal code</Label>
+          <Input
+            id="est-postal"
+            value={postal}
+            onChange={(e) => {
+              setPostal(e.target.value.toUpperCase());
+              setResult(null);
+            }}
+            placeholder="M5V 2T6"
+            required
+          />
+        </div>
+        <div className="col-span-2 space-y-2 sm:col-span-1">
+          <Label htmlFor="est-freq">How often</Label>
+          <NativeSelect
+            id="est-freq"
+            value={frequency}
+            onChange={(e) => {
+              setFrequency(e.target.value as typeof frequency);
+              setResult(null);
+            }}
+          >
+            <option value="ONE_TIME">Once</option>
+            <option value="WEEKLY">Weekly (save 20%)</option>
+            <option value="BIWEEKLY">Every 2 weeks (save 15%)</option>
+            <option value="EVERY_4_WEEKS">Every 4 weeks (save 10%)</option>
+          </NativeSelect>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="est-bed">Bedrooms</Label>
-          <select
+          <NativeSelect
             id="est-bed"
-            className="h-9 w-full rounded-lg border bg-background px-2 text-sm"
             value={bedrooms}
-            onChange={(e) => setBedrooms(Number(e.target.value))}
+            onChange={(e) => {
+              setBedrooms(Number(e.target.value));
+              setResult(null);
+            }}
           >
             {[0, 1, 2, 3, 4, 5, 6].map((n) => (
               <option key={n} value={n}>
                 {n === 0 ? "Studio" : n === 6 ? "6+" : n}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="est-bath">Bathrooms</Label>
-          <select
+          <NativeSelect
             id="est-bath"
-            className="h-9 w-full rounded-lg border bg-background px-2 text-sm"
             value={bathrooms}
-            onChange={(e) => setBathrooms(Number(e.target.value))}
+            onChange={(e) => {
+              setBathrooms(Number(e.target.value));
+              setResult(null);
+            }}
           >
             {[1, 1.5, 2, 2.5, 3, 3.5, 4, 5].map((n) => (
               <option key={n} value={n}>
                 {n === 5 ? "5+" : n}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="est-freq">Frequency</Label>
-        <select
-          id="est-freq"
-          className="h-9 w-full rounded-lg border bg-background px-2 text-sm"
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value as typeof frequency)}
-        >
-          <option value="ONE_TIME">One-time</option>
-          <option value="WEEKLY">Weekly (save 20%)</option>
-          <option value="BIWEEKLY">Every 2 weeks (save 15%)</option>
-          <option value="EVERY_4_WEEKS">Every 4 weeks (save 10%)</option>
-        </select>
-      </div>
-      <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? "Calculating…" : "See my price"}
-      </Button>
+
+      <RoomStrip
+        hue={serviceHue("standard")}
+        blocks={homeBlocks({ bedrooms, bathrooms })}
+        decorative
+      />
+
       {result ? (
-        <div className="rounded-lg bg-muted/40 p-3 text-sm">
-          <p>
-            Standard clean in {result.region}:{" "}
-            <span className="text-lg font-semibold" data-testid="estimate-total">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-t border-foreground pt-4">
+          <div>
+            <p className="wide text-4xl leading-none font-semibold" data-testid="estimate-total">
               {formatCents(result.total)}
-            </span>{" "}
-            incl. tax
-          </p>
-          <Link href={bookHref} className="mt-2 inline-block text-sm font-medium underline">
-            Book this →
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              A standard clean in {result.region}, tax included. Paid after it&apos;s done.
+            </p>
+          </div>
+          <Link href={bookHref} className={buttonVariants({ size: "lg", className: "h-12 px-6" })}>
+            Book this
+            <ArrowRight aria-hidden />
           </Link>
         </div>
-      ) : null}
+      ) : (
+        <Button type="submit" size="lg" className="h-12 w-full px-6 text-base" disabled={busy}>
+          {busy ? "Working it out…" : "See my price"}
+        </Button>
+      )}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </form>
   );

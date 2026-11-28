@@ -8,8 +8,10 @@
 
 /*
  * The look, taken from Trvali, in three rules:
- *  1. The interface is black and white, a cool near-neutral (hue 286). The only other colours
- *     are the states (success, warning, destructive, info), for words and small marks.
+ *  1. The interface is black and white, a cool near-neutral (hue 286). Colour belongs to the
+ *     services: each has its own (`data-hue`, below), and a home is drawn as a strip of rooms
+ *     filled with it. The only other colours are the states (success, warning, destructive,
+ *     info), for words and small marks.
  *  2. Things you press are round (buttons, checkboxes, tabs, menu items). Things you read are
  *     square (cards, tables, fields).
  *  3. One typeface, Special Gothic, in three widths: `wide` for names and headings, normal for
@@ -71,6 +73,12 @@
   --color-bar-muted: var(--bar-muted);
   /* What dims the page behind a dialog, used with an opacity: bg-scrim/35. */
   --color-scrim: var(--scrim);
+  /* The colour of the service in question; see [data-hue]. */
+  --color-hue: var(--hue);
+  --color-hue-ink: var(--hue-ink);
+  --color-hue-tint: var(--hue-tint);
+  --color-hue-half: var(--hue-half);
+  --color-hue-text: var(--hue-text);
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
@@ -207,6 +215,106 @@
   --sidebar-ring: var(--ring);
 }
 
+/*
+ * Service colours. Which service gets which is worked out in modules/marketing/hues.ts; an
+ * element that carries `data-hue` paints with `hue`, `hue-ink` (text on it), and three mixes of it
+ * with the page: `tint` for an empty cell, `half` for half a room (a half bathroom), and `text`
+ * for words in the service's colour. Whatever is portaled needs its own `data-hue`.
+ */
+[data-hue] {
+  --hue-tint: color-mix(in oklab, var(--hue) 11%, var(--background));
+  --hue-half: color-mix(in oklab, var(--hue) 36%, var(--background));
+  --hue-text: color-mix(in oklab, var(--hue) 56%, var(--foreground));
+}
+[data-hue="lagoon"] {
+  --hue: oklch(0.5 0.087 195);
+  --hue-ink: white;
+}
+[data-hue="coral"] {
+  --hue: oklch(0.73 0.15 30);
+  --hue-ink: #0b0b0c;
+}
+[data-hue="cobalt"] {
+  --hue: oklch(0.48 0.2 264);
+  --hue-ink: white;
+}
+[data-hue="marigold"] {
+  --hue: oklch(0.8 0.158 75);
+  --hue-ink: #0b0b0c;
+}
+[data-hue="jungle"] {
+  --hue: oklch(0.47 0.115 148);
+  --hue-ink: white;
+}
+[data-hue="orchid"] {
+  --hue: oklch(0.53 0.18 338);
+  --hue-ink: white;
+}
+[data-hue="sky"] {
+  --hue: oklch(0.8 0.095 228);
+  --hue-ink: #0b0b0c;
+}
+[data-hue="clay"] {
+  --hue: oklch(0.54 0.145 38);
+  --hue-ink: white;
+}
+[data-hue="fig"] {
+  --hue: oklch(0.38 0.12 310);
+  --hue-ink: white;
+}
+[data-hue="olive"] {
+  --hue: oklch(0.53 0.105 112);
+  --hue-ink: white;
+}
+[data-hue="rose"] {
+  --hue: oklch(0.83 0.085 5);
+  --hue-ink: #0b0b0c;
+}
+[data-hue="midnight"] {
+  --hue: oklch(0.36 0.075 255);
+  --hue-ink: white;
+}
+
+/* On black a faint mix disappears, so there is more of the colour in it. */
+.dark [data-hue],
+.dark[data-hue] {
+  --hue-tint: color-mix(in oklab, var(--hue) 19%, var(--background));
+  --hue-half: color-mix(in oklab, var(--hue) 52%, var(--background));
+  --hue-text: color-mix(in oklab, var(--hue) 62%, var(--foreground));
+}
+.dark [data-hue="lagoon"] {
+  --hue: oklch(0.64 0.1 193);
+  --hue-ink: #0b0b0c;
+}
+.dark [data-hue="cobalt"] {
+  --hue: oklch(0.57 0.19 264);
+  --hue-ink: white;
+}
+.dark [data-hue="jungle"] {
+  --hue: oklch(0.61 0.13 148);
+  --hue-ink: #0b0b0c;
+}
+.dark [data-hue="orchid"] {
+  --hue: oklch(0.65 0.18 338);
+  --hue-ink: #0b0b0c;
+}
+.dark [data-hue="clay"] {
+  --hue: oklch(0.64 0.15 38);
+  --hue-ink: #0b0b0c;
+}
+.dark [data-hue="fig"] {
+  --hue: oklch(0.54 0.14 308);
+  --hue-ink: white;
+}
+.dark [data-hue="olive"] {
+  --hue: oklch(0.66 0.115 112);
+  --hue-ink: #0b0b0c;
+}
+.dark [data-hue="midnight"] {
+  --hue: oklch(0.53 0.09 252);
+  --hue-ink: white;
+}
+
 /* Dispatch board (FullCalendar) follows the light/dark tokens. */
 .fc {
   --fc-border-color: var(--border);
@@ -272,6 +380,53 @@
   @supports (corner-shape: squircle) {
     corner-shape: superellipse(1.35);
   }
+}
+
+/*
+ * Rooms. A run of them is one block, ruled off room by room; `--n` is how many it is. Done
+ * (filled), half (a half bathroom: hatched) and empty.
+ *
+ * The rule stands a little before the end of each cell, and the cells together are that much
+ * longer than the block: after the last one it falls outside, however the browser rounds.
+ */
+@layer base {
+  :is(.cells-on, .cells-half, .cells-off) {
+    --rule: 1.5px;
+    --cell-ticks: linear-gradient(
+      to right,
+      transparent calc(100% - 0.75px - var(--rule)),
+      var(--tick) calc(100% - 0.75px - var(--rule)) calc(100% - 0.75px),
+      transparent 0
+    );
+    --cell-size: calc((100% + 1.5px + var(--rule)) / var(--n, 1));
+  }
+}
+@utility cells-on {
+  --tick: color-mix(in oklab, var(--hue-ink) 26%, transparent);
+  background-color: var(--hue);
+  background-image: var(--cell-ticks);
+  background-size: var(--cell-size) 100%;
+}
+@utility cells-half {
+  --tick: var(--background);
+  background-color: var(--hue-half);
+  background-image:
+    var(--cell-ticks),
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 3px,
+      color-mix(in oklab, var(--background) 38%, transparent) 3px 6px
+    );
+  background-size:
+    var(--cell-size) 100%,
+    auto;
+}
+@utility cells-off {
+  --tick: var(--background);
+  --rule: 2px;
+  background-color: var(--hue-tint);
+  background-image: var(--cell-ticks);
+  background-size: var(--cell-size) 100%;
 }
 
 /* Mantine's switch thumb is white, which vanishes on the dark theme's near-white primary track. */
