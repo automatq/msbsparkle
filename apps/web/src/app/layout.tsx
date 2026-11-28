@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Special_Gothic } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { locale } from "@/modules/shared/country";
 import { brandName, siteUrl } from "@/modules/shared/site";
 
-const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
+// One family in three widths (globals.css: `wide`, normal, `narrow`), so its width axis comes along.
+const specialGothic = Special_Gothic({
+  variable: "--font-special-gothic",
+  subsets: ["latin", "latin-ext"],
+  axes: ["wdth"],
+  // Next.js has no measurements of it to size a stand-in by.
+  adjustFontFallback: false,
+});
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 const brand = brandName;
@@ -26,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // (see (admin)/layout.tsx); that changes these attributes before React hydrates.
       data-mantine-color-scheme="light"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${specialGothic.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}

@@ -6,13 +6,26 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * The look, taken from Trvali, in three rules:
+ *  1. The interface is black and white, a cool near-neutral (hue 286). The only other colours
+ *     are the states (success, warning, destructive, info), for words and small marks.
+ *  2. Things you press are round (buttons, checkboxes, tabs, menu items). Things you read are
+ *     square (cards, tables, fields).
+ *  3. One typeface, Special Gothic, in three widths: `wide` for names and headings, normal for
+ *     words, `narrow` for codes and columns of figures.
+ *
+ * Dark mode is the `dark` class on <html>, which only the admin sets (see (admin)/layout.tsx).
+ * The admin's Mantine theme reads the same tokens (components/admin/mantine/provider.tsx), so
+ * a token changed here changes both. When you add or change one, set it in both themes.
+ */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-special-gothic), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -31,6 +44,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -43,82 +59,152 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* A sunken surface: panels, fields, quiet buttons. */
+  --color-well: var(--well);
+  --color-well-strong: var(--well-strong);
+  /* What a text field is filled with: depends on the surface it sits on. */
+  --color-field: var(--field);
+  /* A dark band (a bar, a toast), the same in both themes. */
+  --color-bar: var(--bar);
+  --color-bar-raised: var(--bar-raised);
+  --color-bar-foreground: var(--bar-foreground);
+  --color-bar-muted: var(--bar-muted);
+  /* What dims the page behind a dialog, used with an opacity: bg-scrim/35. */
+  --color-scrim: var(--scrim);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  --shadow-lift: var(--lift);
+
+  --animate-rise: rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
 }
 
-:root {
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.3;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.2;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 1.12;
+  --text-3xl: 2.375rem;
+  --text-3xl--line-height: 1.08;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.03;
+  --text-5xl: 3.75rem;
+  --text-5xl--line-height: 1;
+  --text-6xl: 5rem;
+  --text-6xl--line-height: 0.95;
+}
+
+/*
+ * `.light` and `.dark` also work on an element inside the page: that part is then drawn in that
+ * theme whatever the page's own is.
+ */
+:root,
+.light {
+  color-scheme: light;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.155 0.003 286);
+  --well: oklch(0.966 0.001 286);
+  --well-strong: oklch(0.926 0.002 286);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --primary: oklch(0.155 0.003 286);
+  --primary-foreground: oklch(1 0 0);
+  --muted-foreground: oklch(0.505 0.005 286);
+  --destructive: oklch(0.545 0.215 27);
+  --success: oklch(0.505 0.13 152);
+  --warning: oklch(0.54 0.125 60);
+  --info: oklch(0.5 0.16 258);
+  --border: oklch(0.912 0.002 286);
+  --input: oklch(0.86 0.003 286);
+  --ring: oklch(0.155 0.003 286);
+  --bar: oklch(0.155 0.003 286);
+  --bar-raised: oklch(0.28 0.004 286);
+  --bar-foreground: oklch(0.985 0 0);
+  --bar-muted: oklch(0.74 0.004 286);
+  --scrim: oklch(0 0 0);
+  --lift: 0 1px 2px oklch(0 0 0 / 6%), 0 12px 32px -8px oklch(0 0 0 / 22%);
+  --chart-1: oklch(0.86 0.003 286);
+  --chart-2: oklch(0.6 0.005 286);
+  --chart-3: oklch(0.45 0.005 286);
+  --chart-4: oklch(0.36 0.006 286);
+  --chart-5: oklch(0.26 0.005 286);
+  /* Rounded-[var(--radius)] and Mantine's "md" radius. */
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: oklch(0.15 0.003 286);
+  --foreground: oklch(0.965 0.002 286);
+  --well: oklch(0.2 0.004 286);
+  --well-strong: oklch(0.26 0.005 286);
+  --popover: oklch(0.22 0.005 286);
+  --primary: oklch(0.965 0.002 286);
+  --primary-foreground: oklch(0.155 0.003 286);
+  --muted-foreground: oklch(0.705 0.006 286);
+  --destructive: oklch(0.705 0.18 24);
+  --success: oklch(0.77 0.145 156);
+  --warning: oklch(0.81 0.13 78);
+  --info: oklch(0.75 0.12 250);
+  --border: oklch(0.285 0.005 286);
+  --input: oklch(0.36 0.006 286);
+  --ring: oklch(0.965 0.002 286);
+  --bar: oklch(0.235 0.005 286);
+  --bar-raised: oklch(0.34 0.006 286);
+  --bar-foreground: oklch(0.985 0 0);
+  --bar-muted: oklch(0.74 0.004 286);
+  --scrim: oklch(0 0 0);
+  --lift: 0 0 0 1px oklch(1 0 0 / 8%), 0 16px 40px -8px oklch(0 0 0 / 70%);
+  --chart-1: oklch(0.86 0.004 286);
+  --chart-2: oklch(0.705 0.006 286);
+  --chart-3: oklch(0.5 0.006 286);
+  --chart-4: oklch(0.36 0.006 286);
+  --chart-5: oklch(0.26 0.005 286);
+}
+
+/*
+ * shadcn's names for the same surfaces. They are set beside each theme (not only on :root) so
+ * that a `.light` or `.dark` part of the page resolves them from its own values.
+ */
+:root,
+.light,
+.dark {
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--well);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--well);
+  --accent: var(--well-strong);
+  --accent-foreground: var(--foreground);
+  --field: var(--well);
+  --sidebar: var(--well);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--well-strong);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 /* Dispatch board (FullCalendar) follows the light/dark tokens. */
@@ -136,10 +222,62 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+  }
+  /* A large display is looked at from further away: everything grows a little. */
+  @media screen and (width >= 120rem) {
+    html {
+      font-size: 106.25%;
+    }
+  }
+  @media screen and (width >= 150rem) {
+    html {
+      font-size: 112.5%;
+    }
+  }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  /* Headings are set wide (rule 3), Mantine's <Title> included. */
+  h1,
+  h2,
+  h3 {
+    @apply wide;
   }
+  ::selection {
+    background-color: var(--foreground);
+    color: var(--background);
+  }
+  /* Tailwind 4 leaves buttons with the default arrow cursor. */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+@utility wide {
+  font-stretch: 112.5%;
+  letter-spacing: -0.024em;
+}
+@utility narrow {
+  font-stretch: 86%;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smoother corners where the browser can draw them. */
+@utility squircle {
+  @supports (corner-shape: squircle) {
+    corner-shape: superellipse(1.35);
+  }
+}
+
+/* Mantine's switch thumb is white, which vanishes on the dark theme's near-white primary track. */
+[data-mantine-color-scheme="dark"]
+  .mantine-Switch-input:checked:not(:disabled)
+  + *
+  > .mantine-Switch-thumb {
+  --switch-thumb-bg: var(--background);
 }
