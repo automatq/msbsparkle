@@ -24,6 +24,10 @@ const COLORS: Record<string, MantineColor> = {
   FAILED_FINAL: "red",
   CANCELED: "gray",
   DISPUTED: "red",
+  DRAFT: "yellow",
+  PUBLISHED: "teal",
+  ARCHIVED: "gray",
+  SUCCEEDED: "teal",
 };
 
 /** Booking, job, payment and charge statuses as Mantine badges (Mantine pages; others use StatusBadge). */

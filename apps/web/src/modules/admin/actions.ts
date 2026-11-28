@@ -608,17 +608,29 @@ export async function removeBlackoutAction(id: string): Promise<ActionResult> {
 // ── Pricing tables ─────────────────────────────────────────────────────────
 
 /** Clone a table (any status) into a new DRAFT version for the same scope. */
+/** A pricing table of the caller's organization, or a not-found error (no cross-company access). */
+async function ownPricingTable(ctx: Ctx, id: string) {
+  const table = await prisma.pricingTable.findFirst({
+    where: { id, organizationId: ctx.orgId },
+    include: { rates: true },
+  });
+  if (!table) throw new Error("Pricing table not found.");
+  return table;
+}
+
 export async function cloneDraftPricingAction(
   sourceTableId: string,
   regionId?: string | null,
 ): Promise<ActionResult & { id?: string }> {
   try {
     const ctx = await getCtx("SUPER_ADMIN");
-    const src = await prisma.pricingTable.findUniqueOrThrow({
-      where: { id: sourceTableId },
-      include: { rates: true },
-    });
+    const src = await ownPricingTable(ctx, sourceTableId);
     const scopeRegionId = regionId === undefined ? src.regionId : regionId;
+    if (
+      scopeRegionId &&
+      !(await prisma.region.count({ where: { id: scopeRegionId, organizationId: ctx.orgId } }))
+    )
+      return { ok: false, message: "Region not found." };
     const latest = await prisma.pricingTable.findFirst({
       where: { organizationId: ctx.orgId, regionId: scopeRegionId },
       orderBy: { version: "desc" },
@@ -655,8 +667,7 @@ export async function updateRateAction(
   fields: { amountCents?: number | null; bps?: number | null; minutes?: number | null },
 ): Promise<ActionResult> {
   try {
-    await getCtx("SUPER_ADMIN");
-    const table = await prisma.pricingTable.findUniqueOrThrow({ where: { id: tableId } });
+    const table = await ownPricingTable(await getCtx("SUPER_ADMIN"), tableId);
     if (table.status !== "DRAFT")
       return { ok: false, message: "Only draft tables can be edited. Clone it first." };
     await prisma.pricingRate.update({
@@ -675,8 +686,7 @@ export async function publishPricingAction(
   effectiveFrom: string,
 ): Promise<ActionResult> {
   try {
-    await getCtx("SUPER_ADMIN");
-    const table = await prisma.pricingTable.findUniqueOrThrow({ where: { id: tableId } });
+    const table = await ownPricingTable(await getCtx("SUPER_ADMIN"), tableId);
     if (table.status !== "DRAFT") return { ok: false, message: "Table is not a draft." };
     await prisma.pricingTable.update({
       where: { id: tableId },
@@ -692,7 +702,9 @@ export async function publishPricingAction(
 
 export async function archivePricingAction(tableId: string): Promise<ActionResult> {
   try {
-    await getCtx("SUPER_ADMIN");
+    const table = await ownPricingTable(await getCtx("SUPER_ADMIN"), tableId);
+    if (table.status !== "PUBLISHED")
+      return { ok: false, message: "Only published tables can be archived." };
     await prisma.pricingTable.update({ where: { id: tableId }, data: { status: "ARCHIVED" } });
     revalidatePath("/admin/pricing");
     return { ok: true };

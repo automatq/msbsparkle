@@ -127,27 +127,29 @@ test.describe("admin dispatch", () => {
     const beforeTotal = await quote();
 
     await page.goto("/admin/pricing");
-    const ottawaRows = page.locator("table tbody tr", { hasText: "Ottawa" });
-    if ((await ottawaRows.filter({ hasText: /DRAFT/ }).count()) === 0) {
+    const tables = page.getByTestId("pricing-tables");
+    await expect(tables).toBeVisible();
+    const ottawaRows = tables.locator("tbody tr", { hasText: "Ottawa" });
+    const ottawaDraft = ottawaRows.and(page.locator('[data-status="DRAFT"]'));
+    if (await ottawaDraft.count()) {
+      await ottawaDraft.first().getByRole("link").click();
+    } else {
+      // Cloning opens the new draft.
       const create = page.getByRole("button", { name: "Ottawa draft" });
       if (await create.count()) await create.click();
       else await ottawaRows.first().getByRole("button", { name: "Clone to draft" }).click();
-      await expect(page.getByText("Done")).toBeVisible();
     }
-    await ottawaRows.filter({ hasText: /DRAFT/ }).first().getByRole("link").click();
-    await expect(page.locator("h1").getByText("DRAFT")).toBeVisible();
-    const baseRow = page
-      .locator("table tbody tr", { hasText: "BASE" })
-      .filter({ has: page.locator("td", { hasText: /^standard$/ }) })
-      .first();
+    await page.waitForURL(/\/admin\/pricing\/[^/]+$/);
+    await expect(page.getByTestId("pricing-status")).toHaveAttribute("data-status", "DRAFT");
+    const baseRow = page.locator('tr[data-kind="BASE"][data-key="standard"]');
     const input = baseRow.locator("input").first();
     const current = Number(await input.inputValue());
     await input.fill(String(current + 20));
     await input.blur();
-    await page.waitForTimeout(700);
+    await expect(baseRow.getByTestId("rate-saved")).toBeVisible();
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Publish" }).click();
-    await expect(page.locator("h1").getByText("PUBLISHED")).toBeVisible();
+    await expect(page.getByTestId("pricing-status")).toHaveAttribute("data-status", "PUBLISHED");
 
     const afterTotal = await quote();
     expect(afterTotal).not.toBe(beforeTotal);
