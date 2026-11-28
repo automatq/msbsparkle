@@ -1,7 +1,7 @@
-import { AutoAssignButton } from "@/components/admin/ui";
-import Link from "next/link";
+import { Badge, Group, Paper, Stack, Text } from "@mantine/core";
 import { DispatchCalendar } from "@/components/admin/dispatch-calendar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { DispatchToolbar } from "@/components/admin/mantine/dispatch-toolbar";
+import { PageHeader } from "@/components/admin/mantine/page-header";
 import { loadCalendarData } from "@/modules/admin/calendar-data";
 import { pickRegionForDate } from "@/modules/admin/regions";
 import { requireRole } from "@/modules/auth/session";
@@ -20,11 +20,16 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
     typeof params.region === "string" ? params.region : null,
     localDateToDateColumn(requestedDate ?? todayIn(timezone)),
   );
-  if (!region) return <p>No regions available.</p>;
+  if (!region)
+    return (
+      <Stack>
+        <PageHeader title="Dispatch" />
+        <Text c="dimmed">No regions available.</Text>
+      </Stack>
+    );
   const today = todayIn(region.timezone);
   const date = requestedDate ?? today;
   const { resources, events } = await loadCalendarData(region.id, date);
-  const href = (d: string, r = region.id) => `/admin/calendar?region=${r}&date=${d}`;
   const label = new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
@@ -34,68 +39,45 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   const unassigned = events.filter((e) => e.resourceId === "unassigned").length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Dispatch</h1>
-          <p className="text-sm text-muted-foreground">
-            {label} · {events.length} job{events.length === 1 ? "" : "s"}
+    <Stack gap="md">
+      <PageHeader
+        title="Dispatch"
+        description={
+          <Group component="span" gap={8} wrap="nowrap">
+            <span>
+              {label} · {region.name} · {events.length} job{events.length === 1 ? "" : "s"}
+            </span>
             {unassigned ? (
-              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+              <Badge color="orange" variant="light" size="sm" data-testid="dispatch-unassigned">
                 {unassigned} unassigned
-              </span>
+              </Badge>
             ) : null}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <form className="contents">
-            <select
-              name="region"
-              defaultValue={region.id}
-              className="h-8 rounded-lg border bg-background px-2 text-sm"
-              onChange={undefined}
-            >
-              {regions.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}, {r.province}
-                </option>
-              ))}
-            </select>
-            <input type="hidden" name="date" value={date} />
-            <Button type="submit" variant="outline" size="sm">
-              Switch
-            </Button>
-          </form>
-          {unassigned ? (
-            <AutoAssignButton regionId={region.id} date={date} count={unassigned} />
-          ) : null}
-          <Link
-            href={href(addLocalDays(date, -1))}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            ‹
-          </Link>
-          <Link href={href(today)} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Today
-          </Link>
-          <Link
-            href={href(addLocalDays(date, 1))}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            ›
-          </Link>
-        </div>
-      </div>
-      <DispatchCalendar
-        date={date}
-        resources={resources}
-        events={events}
-        timezoneLabel={region.timezone.split("/")[1]?.replace("_", " ") ?? region.timezone}
+          </Group>
+        }
+        actions={
+          <DispatchToolbar
+            regionId={region.id}
+            regions={regions.map((r) => ({ id: r.id, label: `${r.name}, ${r.province}` }))}
+            date={date}
+            today={today}
+            prev={addLocalDays(date, -1)}
+            next={addLocalDays(date, 1)}
+            unassigned={unassigned}
+          />
+        }
       />
-      <p className="text-xs text-muted-foreground">
+      <Paper p="xs" style={{ overflowX: "auto" }}>
+        <DispatchCalendar
+          date={date}
+          resources={resources}
+          events={events}
+          timezoneLabel={region.timezone.split("/")[1]?.replace("_", " ") ?? region.timezone}
+        />
+      </Paper>
+      <Text size="xs" c="dimmed">
         Drag a job between lanes to assign or unassign. Click a job to open it. Times are shown in
         the region&apos;s local time.
-      </p>
-    </div>
+      </Text>
+    </Stack>
   );
 }

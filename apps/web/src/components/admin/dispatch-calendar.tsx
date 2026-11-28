@@ -3,6 +3,7 @@
 import type { EventDropArg } from "@fullcalendar/core";
 import interactionPlugin from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
+import { Text } from "@mantine/core";
 import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -65,7 +66,7 @@ export function DispatchCalendar({
   }
 
   return (
-    <div className="rounded-xl border bg-background p-2 text-sm [&_.fc-license-message]:hidden">
+    <div className="text-sm [&_.fc-license-message]:hidden">
       <FullCalendar
         plugins={[resourceTimelinePlugin, interactionPlugin]}
         schedulerLicenseKey={LICENSE}
@@ -89,9 +90,18 @@ export function DispatchCalendar({
         }))}
         resourceLabelContent={(arg) => {
           const n = (arg.resource.extendedProps as { jobsToday: number }).jobsToday;
-          return {
-            html: `<div class="px-1"><div class="font-medium">${arg.resource.title}</div>${arg.resource.id === UNASSIGNED ? "" : `<div class="text-xs text-muted-foreground">${n} job${n === 1 ? "" : "s"} today</div>`}</div>`,
-          };
+          return (
+            <div style={{ padding: "0 4px" }}>
+              <Text size="sm" fw={500}>
+                {arg.resource.title}
+              </Text>
+              {arg.resource.id === UNASSIGNED ? null : (
+                <Text size="xs" c="dimmed">
+                  {n} job{n === 1 ? "" : "s"} today
+                </Text>
+              )}
+            </div>
+          );
         }}
         events={events.map((e) => ({
           id: e.id,
@@ -112,9 +122,11 @@ export function DispatchCalendar({
           info.jsEvent.preventDefault();
           router.push(`/admin/jobs/${(info.event.extendedProps as { jobId: string }).jobId}`);
         }}
-        eventContent={(arg) => ({
-          html: `<div class="truncate px-1 text-xs leading-tight"><b>${arg.timeText}</b> ${arg.event.title}</div>`,
-        })}
+        eventContent={(arg) => (
+          <Text size="xs" lh={1.25} truncate px={4} c="white">
+            <b>{arg.timeText}</b> {arg.event.title}
+          </Text>
+        )}
         nowIndicator={false}
       />
     </div>
