@@ -64,7 +64,12 @@ export function DispatchToolbar({
         <Button variant="default" onClick={() => go(today)} disabled={date === today}>
           Today
         </Button>
-        <ActionIcon variant="default" size="input-sm" aria-label="Next day" onClick={() => go(next)}>
+        <ActionIcon
+          variant="default"
+          size="input-sm"
+          aria-label="Next day"
+          onClick={() => go(next)}
+        >
           <ChevronRight size={16} />
         </ActionIcon>
       </Group>
