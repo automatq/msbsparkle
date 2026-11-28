@@ -58,6 +58,7 @@ export function RoomStrip({
   blocks,
   size = "md",
   label,
+  decorative = false,
   className,
 }: {
   hue: Hue;
@@ -65,6 +66,8 @@ export function RoomStrip({
   size?: keyof typeof SIZES;
   /** Read out instead of the blocks, e.g. "Deep cleaning, 3 bedrooms, 2 bathrooms". */
   label?: string;
+  /** Beside words that already say it (the estimator's fields, a service's name): not read out. */
+  decorative?: boolean;
   className?: string;
 }) {
   const s = SIZES[size];
@@ -77,8 +80,9 @@ export function RoomStrip({
   return (
     <div
       data-hue={hue}
-      role="img"
-      aria-label={said}
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : said}
+      aria-hidden={decorative || undefined}
       className={cn("flex w-full", s.strip, className)}
     >
       {blocks.map((b, i) => (

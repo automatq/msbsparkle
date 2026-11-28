@@ -115,7 +115,11 @@ export function Estimator({ className }: { className?: string }) {
         </div>
       </div>
 
-      <RoomStrip hue={serviceHue("standard")} blocks={homeBlocks({ bedrooms, bathrooms })} />
+      <RoomStrip
+        hue={serviceHue("standard")}
+        blocks={homeBlocks({ bedrooms, bathrooms })}
+        decorative
+      />
 
       {result ? (
         <div className="flex flex-wrap items-end justify-between gap-4 border-t border-foreground pt-4">

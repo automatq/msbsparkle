@@ -31,6 +31,7 @@ export function HomesBoard({ className }: { className?: string }) {
               j === 0 ? { ...b, label: h.name, count: undefined } : { kind: b.kind, n: b.n },
           )}
           size={i < 3 ? "lg" : i < 5 ? "md" : "sm"}
+          decorative
           className={cn(HEIGHTS[i] ?? "h-8", "animate-rise motion-reduce:animate-none")}
         />
       ))}

@@ -23,7 +23,7 @@ export function ServiceRows({
               blocks={homeBlocks(sampleHome(s.slug))}
               size="sm"
               className="h-9 max-w-40"
-              label={s.name}
+              decorative
             />
             <div className="min-w-0">
               <p className="wide text-xl font-semibold transition-colors group-hover:text-hue-text sm:text-2xl">
