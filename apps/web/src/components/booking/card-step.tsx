@@ -2,6 +2,7 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -11,28 +12,34 @@ const stripePromise = pk ? loadStripe(pk) : null;
 export function CardStep({
   clientSecret,
   onConfirmed,
-  onBack,
 }: {
   clientSecret: string;
   onConfirmed: (setupIntentId: string) => Promise<void>;
-  onBack: () => void;
+  /** Unused: the wizard's own back link leads back. */
+  onBack?: () => void;
 }) {
   if (!stripePromise)
     return <p className="text-sm text-destructive">Stripe publishable key is missing.</p>;
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe" } }}>
-      <CardForm onConfirmed={onConfirmed} onBack={onBack} />
+    <Elements stripe={stripePromise} options={{ clientSecret, appearance: APPEARANCE }}>
+      <CardForm onConfirmed={onConfirmed} />
     </Elements>
   );
 }
 
-function CardForm({
-  onConfirmed,
-  onBack,
-}: {
-  onConfirmed: (setupIntentId: string) => Promise<void>;
-  onBack: () => void;
-}) {
+/** Stripe's fields drawn like ours: filled, no outline, the same corners (globals.css). */
+const APPEARANCE = {
+  theme: "flat" as const,
+  variables: {
+    colorPrimary: "#0c0c0d",
+    colorBackground: "#f4f4f4",
+    colorText: "#0c0c0d",
+    borderRadius: "12px",
+    spacingUnit: "4px",
+  },
+};
+
+function CardForm({ onConfirmed }: { onConfirmed: (setupIntentId: string) => Promise<void> }) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
@@ -57,17 +64,17 @@ function CardForm({
     <form onSubmit={submit} className="space-y-4">
       <PaymentElement />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Your card is saved securely with Stripe and only charged after your clean is complete.
       </p>
-      <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onBack} disabled={busy}>
-          Back
-        </Button>
-        <Button type="submit" disabled={!stripe || busy}>
-          {busy ? "Confirming…" : "Confirm booking"}
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        disabled={!stripe || busy}
+        className="h-16 w-full justify-between rounded-3xl px-6 text-lg"
+      >
+        <span className="wide font-semibold">{busy ? "Confirming…" : "Confirm booking"}</span>
+        <ArrowRight className="size-5" aria-hidden />
+      </Button>
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import { SiteBar } from "@/components/marketing/site-bar";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-header";
 
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
@@ -6,6 +7,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <SiteBar />
     </>
   );
 }

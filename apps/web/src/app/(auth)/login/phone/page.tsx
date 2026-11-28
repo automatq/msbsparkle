@@ -44,9 +44,9 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
 
   if (!phone) {
     return (
-      <form action={sendCode} className="space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold">Cleaner sign in</h1>
+      <form action={sendCode} className="space-y-5">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-semibold sm:text-5xl">Cleaner sign in</h1>
           <p className="text-sm text-muted-foreground">
             We&apos;ll text a 6-digit code to your mobile.
           </p>
@@ -65,10 +65,10 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
             autoFocus
           />
         </div>
-        <Button type="submit" className="w-full">
+        <Button type="submit" size="lg" className="h-12 w-full text-base">
           Text me a code
         </Button>
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           <Link href="/login" className="underline">
             Customer? Sign in with email
           </Link>
@@ -78,9 +78,9 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
   }
   const [channel, maskedTo] = sent.split(":");
   return (
-    <form action={verify} className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Enter your code</h1>
+    <form action={verify} className="space-y-5">
+      <div className="space-y-3">
+        <h1 className="text-4xl font-semibold sm:text-5xl">Enter your code</h1>
         <p className="text-sm text-muted-foreground">
           {channel === "email"
             ? `Sent by email to ${decodeURIComponent(maskedTo ?? "")} (SMS not configured).`
@@ -105,10 +105,10 @@ export default async function PhoneLoginPage({ searchParams }: PageProps<"/login
           className="text-center text-2xl tracking-[0.5em]"
         />
       </div>
-      <Button type="submit" className="w-full">
+      <Button type="submit" size="lg" className="h-12 w-full text-base">
         Sign in
       </Button>
-      <p className="text-center text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         <Link href="/login/phone" className="underline">
           Use a different number
         </Link>

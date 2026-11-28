@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageIntro } from "@/components/marketing/page-intro";
+import { QuestionList } from "@/components/marketing/question-list";
 import { jsonLd } from "@/modules/marketing/content";
 
 export const metadata: Metadata = { title: "FAQ" };
@@ -45,17 +47,10 @@ export default function FaqPage() {
     })),
   };
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className="mx-auto max-w-6xl px-6">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />
-      <h1 className="text-4xl font-semibold tracking-tight">Frequently asked questions</h1>
-      <dl className="mt-8 divide-y rounded-xl border">
-        {FAQS.map((f) => (
-          <div key={f.q} className="p-4">
-            <dt className="font-medium">{f.q}</dt>
-            <dd className="mt-1 text-sm text-muted-foreground">{f.a}</dd>
-          </div>
-        ))}
-      </dl>
+      <PageIntro title="Frequently asked questions" />
+      <QuestionList items={FAQS} className="mt-12" />
     </div>
   );
 }

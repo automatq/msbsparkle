@@ -22,9 +22,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   }
 
   return (
-    <form action={sendLink} className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Sign in</h1>
+    <form action={sendLink} className="space-y-5">
+      <div className="space-y-3">
+        <h1 className="text-4xl font-semibold sm:text-5xl">Sign in</h1>
         <p className="text-sm text-muted-foreground">We&apos;ll email you a secure sign-in link.</p>
       </div>
       {error ? (
@@ -38,10 +38,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
       </div>
-      <Button type="submit" className="w-full">
+      <Button type="submit" size="lg" className="h-12 w-full text-base">
         Email me a link
       </Button>
-      <p className="text-center text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Cleaner?{" "}
         <Link href="/login/phone" className="underline">
           Sign in with your mobile

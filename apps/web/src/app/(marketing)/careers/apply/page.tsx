@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ApplyForm } from "@/components/marketing/apply-form";
+import { PageIntro } from "@/components/marketing/page-intro";
 import { activeCities } from "@/modules/marketing/content";
 
 export const metadata: Metadata = {
@@ -10,12 +11,11 @@ export const metadata: Metadata = {
 export default async function ApplyPage() {
   const cities = await activeCities();
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Apply to clean with us</h1>
-      <p className="mt-2 text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-6">
+      <PageIntro title="Apply to clean with us">
         Background check required. We hire in every city we serve.
-      </p>
-      <div className="mt-8">
+      </PageIntro>
+      <div className="mt-12 max-w-2xl">
         <ApplyForm cities={cities.map((c) => c.name)} />
       </div>
     </div>

@@ -34,15 +34,15 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
 
   const setupPending = await isSetupPending().catch(() => false);
   return (
-    <form action={login} className="space-y-4">
+    <form action={login} className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold">Admin sign in</h1>
+        <h1 className="text-4xl font-semibold sm:text-5xl">Admin sign in</h1>
         <p className="text-sm text-muted-foreground">Staff and dispatch access.</p>
       </div>
       {setupPending ? (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+        <p className="text-sm font-medium text-warning">
           No admin account exists yet.{" "}
-          <Link href="/setup" className="font-medium underline">
+          <Link href="/setup" className="underline underline-offset-4">
             Finish setup
           </Link>{" "}
           to create one.
@@ -73,7 +73,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
         <Label htmlFor="totp">Authenticator code (if enabled)</Label>
         <Input id="totp" name="totp" inputMode="numeric" autoComplete="one-time-code" />
       </div>
-      <Button type="submit" className="w-full">
+      <Button type="submit" size="lg" className="h-12 w-full text-base">
         Sign in
       </Button>
     </form>

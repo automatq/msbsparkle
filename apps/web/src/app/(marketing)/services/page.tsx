@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { ServiceRows } from "@/components/marketing/service-rows";
 import { prisma } from "@/modules/db/client";
 import { SERVICE_COPY } from "@/modules/marketing/content";
 
@@ -16,30 +18,24 @@ export default async function ServicesPage() {
     orderBy: { sortOrder: "asc" },
   });
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-4xl font-semibold tracking-tight">Cleaning services</h1>
-      <p className="mt-2 text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-6 pt-6">
+      <h1 className="text-5xl font-semibold sm:text-6xl">Cleaning services</h1>
+      <p className="mt-4 max-w-xl text-lg text-muted-foreground">
         Every service is priced upfront online. Recurring plans save 10 to 20%.
       </p>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {services.map((s) => (
-          <Link
-            key={s.id}
-            href={`/services/${s.slug}`}
-            className="rounded-xl border p-5 hover:bg-muted/40"
-          >
-            <p className="text-lg font-medium">{s.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {SERVICE_COPY[s.slug]?.tagline ?? s.description}
-            </p>
-          </Link>
-        ))}
+      <div className="mt-12">
+        <ServiceRows
+          services={services.map((s) => ({
+            slug: s.slug,
+            name: s.name,
+            line: SERVICE_COPY[s.slug]?.tagline ?? s.description,
+          }))}
+        />
       </div>
-      <div className="mt-10">
-        <Link href="/book" className={buttonVariants({ size: "lg" })}>
-          Get an instant price
-        </Link>
-      </div>
+      <Link href="/book" className={buttonVariants({ size: "lg", className: "mt-12 h-12 px-6" })}>
+        Get an instant price
+        <ArrowRight aria-hidden />
+      </Link>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageIntro } from "@/components/marketing/page-intro";
 import { activeCities } from "@/modules/marketing/content";
 import { country, subdivisionName } from "@/modules/shared/country";
 
@@ -15,28 +16,32 @@ export default async function LocationsPage() {
     .map((p) => ({ p, cities: cities.filter((c) => c.province === p) }))
     .sort((a, b) => subdivisionName(a.p).localeCompare(subdivisionName(b.p)));
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-4xl font-semibold tracking-tight">Where we clean</h1>
-      <p className="mt-2 text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-6">
+      <PageIntro title="Where we clean">
         {cities.length} cities across {groups.length}{" "}
         {groups.length === 1
           ? country.subdivisionLabel.toLowerCase()
           : `${country.subdivisionLabel.toLowerCase()}s`}
         . Local teams, one standard.
-      </p>
-      <div className="mt-10 grid gap-10 md:grid-cols-3">
+      </PageIntro>
+      <div className="mt-14 grid gap-x-10 gap-y-14 md:grid-cols-3">
         {groups.map((g) => (
           <section key={g.p}>
-            <h2 className="text-xl font-semibold">{subdivisionName(g.p)}</h2>
-            <ul className="mt-3 space-y-1 text-sm">
+            <h2 className="text-2xl font-semibold">{subdivisionName(g.p)}</h2>
+            <ul className="mt-4 border-t border-foreground">
               {g.cities.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/house-cleaning-service-${c.slug}`} className="hover:underline">
-                    {c.name}
+                <li key={c.id} className="border-b">
+                  <Link
+                    href={`/house-cleaning-service-${c.slug}`}
+                    className="group flex items-baseline justify-between gap-3 py-3"
+                  >
+                    <span className="font-medium group-hover:underline group-hover:underline-offset-4">
+                      {c.name}
+                    </span>
+                    {c.region.phone ? (
+                      <span className="narrow text-sm text-muted-foreground">{c.region.phone}</span>
+                    ) : null}
                   </Link>
-                  {c.region.phone ? (
-                    <span className="ml-2 text-xs text-muted-foreground">{c.region.phone}</span>
-                  ) : null}
                 </li>
               ))}
             </ul>

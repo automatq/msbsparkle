@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GiftCardForm } from "@/components/marketing/gift-card-form";
+import { PageIntro } from "@/components/marketing/page-intro";
 
 export const metadata: Metadata = {
   title: "Gift cards",
@@ -10,22 +11,19 @@ export default async function GiftCardsPage({ searchParams }: PageProps<"/gift-c
   const p = await searchParams;
   const status = typeof p.status === "string" ? p.status : "";
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-4xl font-semibold tracking-tight">Gift a clean home</h1>
-      <p className="mt-2 text-lg text-muted-foreground">
+    <div className="mx-auto max-w-6xl px-6">
+      <PageIntro title="Gift a clean home">
         Perfect for new parents, new homeowners, or anyone who deserves a break.
-      </p>
+      </PageIntro>
       {status === "success" ? (
-        <p className="mt-6 rounded-xl border bg-emerald-50 p-4 text-sm text-emerald-900">
+        <p className="mt-8 font-medium text-success">
           Payment received. The gift card is on its way by email.
         </p>
       ) : null}
       {status === "cancelled" ? (
-        <p className="mt-6 rounded-xl border bg-amber-50 p-4 text-sm text-amber-900">
-          Checkout cancelled. No charge was made.
-        </p>
+        <p className="mt-8 font-medium text-warning">Checkout cancelled. No charge was made.</p>
       ) : null}
-      <div className="mt-8 rounded-xl border p-6">
+      <div className="mt-12 max-w-2xl border-t border-foreground pt-8">
         <GiftCardForm />
       </div>
     </div>

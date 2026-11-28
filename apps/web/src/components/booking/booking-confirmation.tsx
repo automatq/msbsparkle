@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { prisma } from "@/modules/db/client";
+import { serviceHue } from "@/modules/marketing/hues";
 import { formatInZone } from "@/modules/shared/dates";
 import { formatCents } from "@/modules/shared/money";
 
@@ -28,20 +29,25 @@ export async function BookingConfirmation({
   });
   if (!booking) notFound();
   const first = booking.jobs[0];
+  const hue = serviceHue(booking.service.slug);
   return (
-    <div className="mx-auto max-w-xl space-y-6 text-center">
-      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-100 text-2xl">
-        ✓
-      </div>
-      <h1 className="text-2xl font-semibold">You&apos;re booked, {booking.customer.firstName}!</h1>
-      <p className="text-muted-foreground">
-        Booking{" "}
-        <span className="font-mono font-medium text-foreground" data-testid="booking-number">
-          {booking.bookingNumber}
-        </span>
-        . A confirmation is on its way to {booking.customer.email}.
-      </p>
-      <div className="rounded-xl border p-4 text-left text-sm">
+    <div className="mx-auto max-w-3xl">
+      {/* Opens in the service's colour, the way the printed confirmation would. */}
+      <section data-hue={hue} className="rounded-3xl bg-hue p-8 text-hue-ink sm:p-10">
+        <p className="text-sm font-medium opacity-80">
+          Booking{" "}
+          <span className="narrow font-semibold opacity-100" data-testid="booking-number">
+            {booking.bookingNumber}
+          </span>
+        </p>
+        <h1 className="mt-10 text-4xl font-semibold sm:text-6xl">
+          You&apos;re booked, {booking.customer.firstName}!
+        </h1>
+        <p className="mt-4 max-w-md opacity-90">
+          A confirmation is on its way to {booking.customer.email}.
+        </p>
+      </section>
+      <dl className="mt-10 border-t border-foreground">
         <Row k="Service" v={booking.service.name} />
         <Row
           k="First clean"
@@ -74,17 +80,22 @@ export async function BookingConfirmation({
             }
           />
         ) : null}
-      </div>
-      <p className="text-sm text-muted-foreground">
+      </dl>
+      <p className="mt-6 text-muted-foreground">
         Free changes up to 24 hours before your arrival window. Sign in with your email to manage
         bookings.
       </p>
       {embedded ? (
-        <a href="/login" target="_blank" rel="noopener" className={buttonVariants()}>
+        <a
+          href="/login"
+          target="_blank"
+          rel="noopener"
+          className={buttonVariants({ size: "lg", className: "mt-8 h-12 px-6" })}
+        >
           Manage my booking
         </a>
       ) : (
-        <Link href="/login" className={buttonVariants()}>
+        <Link href="/login" className={buttonVariants({ size: "lg", className: "mt-8 h-12 px-6" })}>
           Manage my booking
         </Link>
       )}
@@ -94,9 +105,9 @@ export async function BookingConfirmation({
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1.5">
-      <span className="text-muted-foreground">{k}</span>
-      <span className="text-right">{v}</span>
+    <div className="flex justify-between gap-6 border-b py-3.5">
+      <dt className="text-muted-foreground">{k}</dt>
+      <dd className="text-right font-medium">{v}</dd>
     </div>
   );
 }
