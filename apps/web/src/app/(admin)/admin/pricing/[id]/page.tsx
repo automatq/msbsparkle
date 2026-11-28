@@ -1,15 +1,22 @@
+import {
+  Code,
+  Group,
+  Paper,
+  Stack,
+  Table,
+  TableScrollContainer,
+  TableTbody,
+  TableTd,
+  TableTh,
+  TableThead,
+  TableTr,
+  Text,
+  Title,
+} from "@mantine/core";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PublishPanel, RateCell } from "@/components/admin/pricing-panels";
-import { StatusBadge } from "@/components/admin/ui";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PublishPanel, RateCell } from "@/components/admin/mantine/pricing-panels";
+import { StatusPill } from "@/components/admin/mantine/status-badge";
 import { requireRole } from "@/modules/auth/session";
 import { prisma } from "@/modules/db/client";
 
@@ -29,6 +36,8 @@ const KIND_ORDER = [
   "MIN_JOB",
 ];
 
+const kindLabel = (k: string) => k.charAt(0) + k.slice(1).replaceAll("_", " ").toLowerCase();
+
 export default async function PricingTablePage({ params }: PageProps<"/admin/pricing/[id]">) {
   const ctx = await requireRole("/admin/login", "SUPER_ADMIN");
   const { id } = await params;
@@ -43,82 +52,105 @@ export default async function PricingTablePage({ params }: PageProps<"/admin/pri
       KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) ||
       a.key.localeCompare(b.key, undefined, { numeric: true }),
   );
+  const scope = t.region ? t.region.name : "Organization default";
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <Stack gap="md">
+      <Group justify="space-between" align="flex-end" gap="sm">
         <div>
-          <p className="text-xs text-muted-foreground">
+          <Text size="xs" c="dimmed">
             <Link href="/admin/pricing" className="hover:underline">
               Pricing
             </Link>
-          </p>
-          <h1 className="flex items-center gap-3 text-2xl font-semibold">
-            {t.region ? t.region.name : "Organization default"} · v{t.version}{" "}
-            <StatusBadge status={t.status} />
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </Text>
+          <Group gap="sm" align="center">
+            <Title order={1} fz={24} fw={600}>
+              {scope} · v{t.version}
+            </Title>
+            <span data-testid="pricing-status" data-status={t.status}>
+              <StatusPill status={t.status} />
+            </span>
+          </Group>
+          <Text size="sm" c="dimmed">
             Effective {t.effectiveFrom.toISOString().slice(0, 10)}
             {t.notes ? ` · ${t.notes}` : ""}
-          </p>
+          </Text>
         </div>
         <PublishPanel tableId={t.id} status={t.status} />
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Kind</TableHead>
-            <TableHead>Key</TableHead>
-            <TableHead className="text-right">Amount ($)</TableHead>
-            <TableHead className="text-right">Percent (%)</TableHead>
-            <TableHead className="text-right">Minutes</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rates.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell className="text-xs">{r.kind.replaceAll("_", " ")}</TableCell>
-              <TableCell className="font-mono text-xs">{r.key}</TableCell>
-              <TableCell className="text-right">
-                <RateCell
-                  tableId={t.id}
-                  rateId={r.id}
-                  field="amountCents"
-                  value={r.amountCents}
-                  editable={editable && r.kind !== "FREQUENCY_DISCOUNT" && r.kind !== "HOURLY_MIN"}
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <RateCell
-                  tableId={t.id}
-                  rateId={r.id}
-                  field="bps"
-                  value={r.bps}
-                  editable={editable && r.kind === "FREQUENCY_DISCOUNT"}
-                  scale={100}
-                  step="0.5"
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <RateCell
-                  tableId={t.id}
-                  rateId={r.id}
-                  field="minutes"
-                  value={r.minutes}
-                  editable={editable}
-                  scale={1}
-                  step="5"
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      </Group>
+
+      <Paper p={0}>
+        <TableScrollContainer minWidth={640}>
+          <Table data-testid="pricing-rates">
+            <TableThead>
+              <TableTr>
+                <TableTh>Kind</TableTh>
+                <TableTh>Key</TableTh>
+                <TableTh ta="right">Amount ($)</TableTh>
+                <TableTh ta="right">Percent (%)</TableTh>
+                <TableTh ta="right">Minutes</TableTh>
+              </TableTr>
+            </TableThead>
+            <TableTbody>
+              {rates.map((r) => {
+                const name = `${kindLabel(r.kind)} ${r.key}`;
+                return (
+                  <TableTr key={r.id} data-kind={r.kind} data-key={r.key}>
+                    <TableTd>
+                      <Text size="sm">{kindLabel(r.kind)}</Text>
+                    </TableTd>
+                    <TableTd>
+                      <Code fz="xs">{r.key}</Code>
+                    </TableTd>
+                    <TableTd ta="right">
+                      <RateCell
+                        tableId={t.id}
+                        rateId={r.id}
+                        field="amountCents"
+                        value={r.amountCents}
+                        label={`${name} amount`}
+                        editable={
+                          editable && r.kind !== "FREQUENCY_DISCOUNT" && r.kind !== "HOURLY_MIN"
+                        }
+                      />
+                    </TableTd>
+                    <TableTd ta="right">
+                      <RateCell
+                        tableId={t.id}
+                        rateId={r.id}
+                        field="bps"
+                        value={r.bps}
+                        label={`${name} percent`}
+                        editable={editable && r.kind === "FREQUENCY_DISCOUNT"}
+                        scale={100}
+                        step={0.5}
+                      />
+                    </TableTd>
+                    <TableTd ta="right">
+                      <RateCell
+                        tableId={t.id}
+                        rateId={r.id}
+                        field="minutes"
+                        value={r.minutes}
+                        label={`${name} minutes`}
+                        editable={editable}
+                        scale={1}
+                        step={5}
+                      />
+                    </TableTd>
+                  </TableTr>
+                );
+              })}
+            </TableTbody>
+          </Table>
+        </TableScrollContainer>
+      </Paper>
       {editable ? (
-        <p className="text-xs text-muted-foreground">
-          Cells save when you leave them. Publish to make this version live; existing bookings keep
-          their locked quotes.
-        </p>
+        <Text size="xs" c="dimmed">
+          Each value saves when you leave the field. Publishing makes this version live; existing
+          bookings keep the quote they were booked with.
+        </Text>
       ) : null}
-    </div>
+    </Stack>
   );
 }
